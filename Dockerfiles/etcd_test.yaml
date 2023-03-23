@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+  etcd1:
+    image: quay.io/coreos/etcd:v3.5.0
+    command: 
+      - etcd
+      - --data-dir=data.etcd
+      - --name=etcd1 
+      - --initial-advertise-peer-urls=http://etcd1:2380 
+      - --listen-peer-urls=http://0.0.0.0:2380 
+      - --advertise-client-urls=http://etcd1:2379 
+      - --listen-client-urls=http://0.0.0.0:2379 
+      - --initial-cluster=etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380 
+      - --initial-cluster-state=new
+             
+             
+    volumes:
+      - ../etcd-data-1:/data.etcd
+    # ports:
+    #   - "2379:2379"
+    #   - "2380:2380"
+    networks:
+      - custom
+
+  etcd2:
+    image: quay.io/coreos/etcd:v3.5.0
+    command: 
+      - etcd
+      - --data-dir=data.etcd
+      - --name=etcd2 
+      - --initial-advertise-peer-urls=http://etcd2:2380 
+      - --listen-peer-urls=http://0.0.0.0:2380 
+      - --advertise-client-urls=http://etcd2:2379 
+      - --listen-client-urls=http://0.0.0.0:2379 
+      - --initial-cluster=etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380 
+      - --initial-cluster-state=new
+             
+             
+    volumes:
+      - ../etcd-data-2:/data.etcd
+    # ports:
+    #   - "2379:2379"
+    #   - "2380:2380"
+    networks:
+        - custom
+
+  etcd3:
+    image: quay.io/coreos/etcd:v3.5.0
+    command: 
+      - etcd
+      - --data-dir=data.etcd
+      - --name=etcd3 
+      - --initial-advertise-peer-urls=http://etcd3:2380 
+      - --listen-peer-urls=http://0.0.0.0:2380 
+      - --advertise-client-urls=http://etcd3:2379 
+      - --listen-client-urls=http://0.0.0.0:2379 
+      - --initial-cluster=etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380 
+      - --initial-cluster-state=new
+             
+             
+    volumes:
+      - ../etcd-data-3:/data.etcd
+    # ports:
+    #   - "2379:2379"
+    #   - "2380:2380"
+    networks:
+      - custom
+      
+networks:
+    custom:
+        driver: bridge
