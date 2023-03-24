@@ -1,0 +1,106 @@
+version: '3.9'
+
+services:
+    reverse_proxy:
+      image: nginx
+      container_name: reverse_proxy
+      volumes:
+          - .confs/nginx.conf:/etc/nginx/nginx.conf
+      ports:
+          - 8080:80
+      deploy:
+      networks:       
+          - roachnet
+      depends_on:
+          - atm_one
+          - atm_two
+          - atm_three
+    cockroach_one:
+      image: cockroachdb/cockroach:latest
+      container_name: cockroach_one
+      hostname: cockroach_one
+      volumes:
+        - "../data/roach1:/cockroach/cockroach-data"
+      ports:
+        - "26257:26257"
+        - "8080:8080"
+      command: "start --insecure --join=cockroach_one,cockroach_two,cockroach_three"
+      networks:
+        - roachnet
+    
+    cockroach_two:
+      image: cockroachdb/cockroach:latest
+      container_name: cockroach_two
+      hostname: cockroach_two
+      volumes:
+        - "../data/roach2:/cockroach/cockroach-data"
+      ports:
+        - "26258:26257"
+        - "8081:8080"
+      command: "start --insecure --join=cockroach_one,cockroach_two,cockroach_three"
+      networks:
+        - roachnet
+
+    cockroach_three:
+      image: cockroachdb/cockroach:latest
+      container_name: cockroach_three
+      hostname: cockroach_three
+      volumes:
+        - "../data/roach3:/cockroach/cockroach-data"
+      ports:
+        - "26259:26257"
+        - "8082:8080"
+      command: "start --insecure --join=cockroach_one,cockroach_two,cockroach_three"
+      networks:
+        - roachnet   
+    
+    atm_one: 
+      image: atm:latest
+      container_name: atm_one
+      hostname: atm_one
+      networks:
+        - roachnet
+      restart: always
+      depends_on:
+        - cockroach_one
+      environment:
+            - DB_NAME=cockroach_one
+            - HOST_NAME=cockroach_one
+      entrypoint: python
+      command: app.py
+    
+
+    atm_two: 
+      image: atm:latest
+      container_name: atm_two
+      hostname: atm_two
+      networks:
+        - roachnet
+      restart: always
+      depends_on:
+        - cockroach_two
+      environment:
+            - DB_NAME=cockroach_two
+            - HOST_NAME=cockroach_two
+      entrypoint: python
+      command: app.py
+    
+
+    atm_three: 
+      image: atm:latest
+      container_name: atm_three
+      hostname: atm_three
+      networks:
+        - roachnet
+      restart: always
+      depends_on:
+        - cockroach_three
+      environment:
+            - DB_NAME=cockroach_three
+            - HOST_NAME=cockroach_three
+      entrypoint: python
+      command: app.py
+    
+networks:
+    roachnet:
+      driver: bridge
