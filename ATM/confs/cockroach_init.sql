@@ -1,0 +1,2 @@
+DROP DATABASE IF EXISTS atm_flask;
+CREATE DATABASE atm_flask;
