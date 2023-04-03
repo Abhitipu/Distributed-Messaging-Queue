@@ -55,7 +55,7 @@ class LoggingQueue():
             return 1
         else:
             print(
-                f"Message '{message}' could not be added to topic {topic} with partition {partition_id}.")
+                f" {status} Message '{message}' could not be added to topic {topic} with partition {partition_id}.")
             return -1
 
     def dequeue(self, topic_name: str, partition_id: int, offset: int, *args, **kwargs) -> str:

@@ -183,7 +183,7 @@ if __name__ == '__main__':
                     broker_id = response
                     ID.createID(broker_id,app)
                     break
-                sleep(randint(1, 3)/100)
+                sleep(randint(1, 3))
 
     # with ThreadPoolExecutor(max_workers=1) as executor:
     #     executor.submit(broker.heartbeat, args.managerIP, args.managerPort, broker_id)

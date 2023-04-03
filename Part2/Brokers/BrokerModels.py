@@ -108,10 +108,11 @@ class TopicMessage(db.Model):
     def addMessage(message, topic_name, partition_id, app):
         if not TopicName.CheckTopic(topic_name=topic_name, partition_id=partition_id):
             print(
-                f"Topic {topic_name} with partition {partition_id} does not exist.")
-            return -1
+                f"Topic {topic_name} with partition {partition_id} does not exist.",file=sys.stderr)
+            return -2
 
         topic = TopicMessage(topic_name, partition_id, message)
+        print(topic,file=sys.stderr)
         with app.app_context():
             try:
                 db.session.add(topic)
@@ -161,6 +162,7 @@ class ReplicatedTopicMessage(SyncObj):
 
     @replicated
     def addMessage(self, message, topic_name, partition_id):
+        print("Hiiiii add message replicated topic ",file=sys.stderr)
         return TopicMessage.addMessage(message, topic_name, partition_id, self.app)
 
     def retrieveMessage(self, topic_name, partition_id, offset):
