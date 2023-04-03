@@ -6,7 +6,7 @@ db = SQLAlchemy()
 
 class Account(db.Model):
     __tablename__ = 'Account'
-    account_id = db.Column(db.Integer, primary_key=True)
+    account_id = db.Column(db.String, primary_key=True)
     balance = db.Column(db.Integer)
 
     def __init__(self, account_id, balance):
@@ -32,7 +32,7 @@ class Account(db.Model):
 
     @staticmethod
     def CreateAccount():
-        account_id = uuid.uuid4().int
+        account_id = uuid.uuid4()
         account = Account(account_id, 0)
         db.session.add(account)
         db.session.commit()
@@ -40,16 +40,18 @@ class Account(db.Model):
     
     @staticmethod
     def Deposit(account_id, amount):
+        print("Deposit")
         if Account.CheckAccountExists(account_id) is False:
             return -1
         
         account = Account.query.filter_by(account_id=account_id).first()
-        account.balance += amount
+        account.balance += int(amount)
         db.session.commit()
         return 1
     
     @staticmethod
     def Withdraw(account_id, amount):
+        amount = int(amount)
         if Account.CheckAccountExists(account_id) is False:
             return -1
         
@@ -62,12 +64,12 @@ class Account(db.Model):
 
     @staticmethod
     def Transfer(from_account_id, to_account_id, amount):
+        amount = int(amount)
         if Account.CheckAccountExists(from_account_id) is False or Account.CheckAccountExists(to_account_id) is False:
             return -1
         
-        if Account.Withdraw(from_account_id, amount) is False:
+        if Account.Withdraw(from_account_id, amount) < 0:
             return -2
-        
         Account.Deposit(to_account_id, amount)
         return 1
     

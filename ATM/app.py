@@ -13,12 +13,12 @@ app = Flask(__name__)
 DATABASE_CONFIG = {
     'driver': 'postgresql',
     'host': os.getenv('HOST_NAME'),
-    'user': 'root',
-    'port': 26257,
+    'user': 'postgres',
+    'port': 5432,
     'dbname': os.getenv('DB_NAME'),
 }
 
-db_uri = f"{DATABASE_CONFIG['driver']}://{DATABASE_CONFIG['user']}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['dbname']}?sslmode=disable"
+db_uri = f"{DATABASE_CONFIG['driver']}://{DATABASE_CONFIG['user']}:postgres@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['dbname']}"
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
@@ -31,9 +31,19 @@ db.init_app(app)
 
 # sessionmaker = sqlalchemy.orm.sessionmaker(db.engine)
 
-@app.route('/')
+@app.route('/', methods=['GET'])
 def home():
-    return "<h1>ATM</h1>"
+    dict = request.get_json()
+    account_id = dict['account_id']
+    print(account_id)
+    if Account.CheckAccountExists(account_id) is False:
+        return {
+            "status": "Failure",
+        }
+    else:
+        return {
+            "status": "Success",
+        }
 
 # @app.route('/showall', methods=['GET'])
 # def show_all():
@@ -99,7 +109,7 @@ def deposit():
 @app.route('/balance', methods=['GET'])
 def get_balance():
     dict = request.get_json()
-    balance = Account.GetBalance(dict['account_id'])
+    balance = Account.CheckBalance(dict['account_id'])
     
     if balance == -1:
         response = {
