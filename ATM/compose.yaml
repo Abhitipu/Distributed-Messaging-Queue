@@ -1,23 +1,6 @@
 version: '3.9'
 
-services:
-    reverse_proxy:
-      image: nginx
-      container_name: reverse_proxy
-      volumes:
-          - .confs/nginx.conf:/etc/nginx/nginx.conf
-      ports:
-          - 8080:80
-      deploy:
-      networks:       
-          - roachnet
-      depends_on:
-          - atm_one
-          - atm_two
-          - atm_three
-
-
-          
+services:        
     db_one:
       image: postgres:13
       container_name: db_one
@@ -25,12 +8,18 @@ services:
       environment:
         - 'POSTGRES_PASSWORD=postgres'
         - 'POSTGRES_DB=db_one'
+        - 'POSTGRES_USER=postgres'
       volumes:
         - "../data/db_one:/var/lib/postgresql/data"
-      ports:
-        - "5432:5432"
       networks:
         - atmnet
+      healthcheck:
+        test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres --dbname db_one'"]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+      restart: always
+      
     
     db_two:
       image: postgres:13
@@ -41,10 +30,14 @@ services:
         - 'POSTGRES_DB=db_two'
       volumes:
         - "../data/db_two:/var/lib/postgresql/data"
-      ports:
-        - "5433:5432"
       networks:
         - atmnet
+      healthcheck:
+        test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres --dbname db_two'"]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+      restart: always
 
     db_three:
       image: postgres:13
@@ -55,10 +48,14 @@ services:
         - 'POSTGRES_DB=db_three'
       volumes:
         - "../data/db_three:/var/lib/postgresql/data"
-      ports:
-        - "5434:5432"
       networks:
-        - atmnet   
+        - atmnet
+      healthcheck:
+        test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres --dbname db_three'"]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+      restart: always   
     
     atm_one: 
       image: atm:latest
@@ -68,10 +65,12 @@ services:
         - atmnet
       restart: always
       depends_on:
-        - db_one
+        db_one : 
+          condition: service_healthy
       environment:
             - DB_NAME=db_one
             - HOST_NAME=atm_one
+            - PORT=8080
       entrypoint: python
       command: app.py
     
@@ -84,10 +83,12 @@ services:
         - atmnet
       restart: always
       depends_on:
-        - db_two
+        db_two : 
+          condition: service_healthy
       environment:
-            - DB_NAME=db_two
-            - HOST_NAME=atm_two
+        - DB_NAME=db_two
+        - HOST_NAME=atm_two
+        - PORT=8080
       entrypoint: python
       command: app.py
     
@@ -100,16 +101,20 @@ services:
         - atmnet
       restart: always
       depends_on:
-        - db_three
+        db_one : 
+          condition: service_healthy
       environment:
             - DB_NAME=db_three
             - HOST_NAME=atm_three
+            - PORT=8080
       entrypoint: python
       command: app.py
     
 networks:
     atmnet:
       driver: bridge
+
+
 
 # version: '3.9'
 # services:

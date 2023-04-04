@@ -1,4 +1,5 @@
 import uuid
+import os
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 
@@ -8,8 +9,18 @@ from pysyncobj import SyncObj, replicated
 
 
 class ReplicatedAccount(SyncObj):
-    def __init__(self,mynode,othernodes):
-        super(ReplicatedAccount, self).__init__(mynode, othernodes)
+    def __init__(self):
+        self_addr = os.getenv('HOSTNAME')+':'+os.getenv('PORT')
+        base_broker = '_'.join(os.getenv('HOSTNAME').split('_')[:-1])
+        addr_list = []
+        for suffix in ['one', 'two', 'three']:
+            if suffix != os.getenv('HOSTNAME').split('_')[-1]:
+                addr_list.append(base_broker + '_' + suffix +
+                                 ':' + os.getenv('PORT'))
+
+        print(f"self_addr: {self_addr}")
+        print(f"addr_list: {addr_list}")
+        super(ReplicatedAccount, self).__init__(self_addr, addr_list)
 
     @replicated
     def create(self, account_id):
