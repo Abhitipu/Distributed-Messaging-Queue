@@ -12,13 +12,14 @@ from models import Account, db, ReplicatedAccount
 app = Flask(__name__)
 DATABASE_CONFIG = {
     'driver': 'postgresql',
-    'host': os.getenv('HOST_NAME'),
+    'host': os.getenv('DB_NAME'),
     'user': 'postgres',
     'port': 5432,
     'dbname': os.getenv('DB_NAME'),
+    'password' : 'postgres'
 }
 
-db_uri = f"{DATABASE_CONFIG['driver']}://{DATABASE_CONFIG['user']}:postgres@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['dbname']}"
+db_uri = f"{DATABASE_CONFIG['driver']}://{DATABASE_CONFIG['user']}:{DATABASE_CONFIG['password']}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['dbname']}"
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
@@ -31,7 +32,7 @@ db.init_app(app)
 
 
 
-replicated_account = ReplicatedAccount('localhost:5000', ['localhost:5001'])
+replicated_account = ReplicatedAccount()
 
 @app.route('/', methods=['GET'])
 def home():
