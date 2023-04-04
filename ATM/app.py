@@ -6,7 +6,7 @@ import sqlalchemy.orm
 # from cockroachdb.sqlalchemy import run_transaction
 
 import os
-from models import Account, db
+from models import Account, db, ReplicatedAccount
 
 
 app = Flask(__name__)
@@ -29,7 +29,9 @@ app.config['SQLALCHEMY_ECHO'] = False
 app.config['DEBUG'] = True
 db.init_app(app)
 
-# sessionmaker = sqlalchemy.orm.sessionmaker(db.engine)
+
+
+replicated_account = ReplicatedAccount('localhost:5000', ['localhost:5001'])
 
 @app.route('/', methods=['GET'])
 def home():
@@ -56,7 +58,7 @@ def home():
 
 @app.route('/create', methods=['POST'])
 def create():
-    account_id = Account.CreateAccount()
+    account_id = ReplicatedAccount.create()
     response = {
         "status": "Success",
         "account_id": account_id
@@ -67,7 +69,7 @@ def create():
 @app.route('/withdraw', methods=['POST'])
 def withdraw():
     dict = request.get_json()
-    status = Account.Withdraw(dict['account_id'], dict['amount'])
+    status = ReplicatedAccount.withdraw(dict['account_id'], dict['amount'])
     
     if status == -1:
         response = {
@@ -90,7 +92,7 @@ def withdraw():
 @app.route('/deposit', methods=['POST'])
 def deposit():
     dict = request.get_json()
-    status = Account.Deposit(dict['account_id'], dict['amount'])
+    status = ReplicatedAccount.deposit(dict['account_id'], dict['amount'])
     
     if status == -1:
         response = {
@@ -128,7 +130,7 @@ def get_balance():
 @app.route('/transfer', methods=['POST'])
 def transfer():
     dict = request.get_json()
-    status = Account.Transfer(dict['from_account_id'], dict['to_account_id'], dict['amount'])
+    status = ReplicatedAccount.transfer(dict['from_account_id'], dict['to_account_id'], dict['amount'])
     
     if status == -1:
         response = {

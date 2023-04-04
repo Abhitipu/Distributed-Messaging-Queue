@@ -4,6 +4,29 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+from pysyncobj import SyncObj, replicated
+
+
+class ReplicatedAccount(SyncObj):
+    def __init__(self,mynode,othernodes):
+        super(ReplicatedAccount, self).__init__(mynode, othernodes)
+
+    @replicated
+    def create(self, account_id):
+        return Account.CreateAccount(account_id)
+
+    @replicated
+    def deposit(self, account_id, amount):
+        return Account.Deposit(account_id, amount)
+    
+    @replicated
+    def withdraw(self, account_id, amount):
+        return Account.Withdraw(account_id, amount)
+
+    @replicated
+    def transfer(self, from_account_id, to_account_id, amount):
+        return Account.Transfer(from_account_id, to_account_id, amount)
+
 class Account(db.Model):
     __tablename__ = 'Account'
     account_id = db.Column(db.String, primary_key=True)

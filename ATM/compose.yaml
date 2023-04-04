@@ -16,7 +16,7 @@ services:
           - atm_two
           - atm_three
     cockroach_one:
-      image: cockroachdb/cockroach:latest
+      image: postgres:13
       container_name: cockroach_one
       hostname: cockroach_one
       volumes:
@@ -24,12 +24,12 @@ services:
       ports:
         - "26257:26257"
         - "8080:8080"
-      command: "start --insecure --join=cockroach_one,cockroach_two,cockroach_three"
+      command: "start --insecure --join=cockroach_one,cockroach_two,db_three"
       networks:
         - roachnet
     
     cockroach_two:
-      image: cockroachdb/cockroach:latest
+      image: postgres:13
       container_name: cockroach_two
       hostname: cockroach_two
       volumes:
@@ -37,20 +37,19 @@ services:
       ports:
         - "26258:26257"
         - "8081:8080"
-      command: "start --insecure --join=cockroach_one,cockroach_two,cockroach_three"
+      command: "start --insecure --join=cockroach_one,cockroach_two,db_three"
       networks:
         - roachnet
 
-    cockroach_three:
-      image: cockroachdb/cockroach:latest
-      container_name: cockroach_three
-      hostname: cockroach_three
+    db_three:
+      image: postgres:13
+      container_name: db_three
+      hostname: db_three
       volumes:
-        - "../data/roach3:/cockroach/cockroach-data"
-      ports:
-        - "26259:26257"
-        - "8082:8080"
-      command: "start --insecure --join=cockroach_one,cockroach_two,cockroach_three"
+        - ../data/db_three:/var/lib/postgresql/data
+      environment:
+        - 'POSTGRES_PASSWORD=postgres'
+        - 'POSTGRES_DB=db_three'
       networks:
         - roachnet   
     
@@ -94,10 +93,10 @@ services:
         - roachnet
       restart: always
       depends_on:
-        - cockroach_three
+        - db_three
       environment:
-            - DB_NAME=cockroach_three
-            - HOST_NAME=cockroach_three
+            - DB_NAME=db_three
+            - HOST_NAME=db_three
       entrypoint: python
       command: app.py
     
