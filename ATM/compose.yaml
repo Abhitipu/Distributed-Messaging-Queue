@@ -15,56 +15,63 @@ services:
           - atm_one
           - atm_two
           - atm_three
-    cockroach_one:
+
+
+          
+    db_one:
       image: postgres:13
-      container_name: cockroach_one
-      hostname: cockroach_one
+      container_name: db_one
+      hostname: db_one
+      environment:
+        - 'POSTGRES_PASSWORD=postgres'
+        - 'POSTGRES_DB=db_one'
       volumes:
-        - "../data/roach1:/cockroach/cockroach-data"
+        - "../data/db_one:/var/lib/postgresql/data"
       ports:
-        - "26257:26257"
-        - "8080:8080"
-      command: "start --insecure --join=cockroach_one,cockroach_two,db_three"
+        - "5432:5432"
       networks:
-        - roachnet
+        - atmnet
     
-    cockroach_two:
+    db_two:
       image: postgres:13
-      container_name: cockroach_two
-      hostname: cockroach_two
+      container_name: db_two
+      hostname: db_two
+      environment:
+        - 'POSTGRES_PASSWORD=postgres'
+        - 'POSTGRES_DB=db_two'
       volumes:
-        - "../data/roach2:/cockroach/cockroach-data"
+        - "../data/db_two:/var/lib/postgresql/data"
       ports:
-        - "26258:26257"
-        - "8081:8080"
-      command: "start --insecure --join=cockroach_one,cockroach_two,db_three"
+        - "5433:5432"
       networks:
-        - roachnet
+        - atmnet
 
     db_three:
       image: postgres:13
       container_name: db_three
       hostname: db_three
-      volumes:
-        - ../data/db_three:/var/lib/postgresql/data
       environment:
         - 'POSTGRES_PASSWORD=postgres'
         - 'POSTGRES_DB=db_three'
+      volumes:
+        - "../data/db_three:/var/lib/postgresql/data"
+      ports:
+        - "5434:5432"
       networks:
-        - roachnet   
+        - atmnet   
     
     atm_one: 
       image: atm:latest
       container_name: atm_one
       hostname: atm_one
       networks:
-        - roachnet
+        - atmnet
       restart: always
       depends_on:
-        - cockroach_one
+        - db_one
       environment:
-            - DB_NAME=cockroach_one
-            - HOST_NAME=cockroach_one
+            - DB_NAME=db_one
+            - HOST_NAME=atm_one
       entrypoint: python
       command: app.py
     
@@ -74,13 +81,13 @@ services:
       container_name: atm_two
       hostname: atm_two
       networks:
-        - roachnet
+        - atmnet
       restart: always
       depends_on:
-        - cockroach_two
+        - db_two
       environment:
-            - DB_NAME=cockroach_two
-            - HOST_NAME=cockroach_two
+            - DB_NAME=db_two
+            - HOST_NAME=atm_two
       entrypoint: python
       command: app.py
     
@@ -90,16 +97,117 @@ services:
       container_name: atm_three
       hostname: atm_three
       networks:
-        - roachnet
+        - atmnet
       restart: always
       depends_on:
         - db_three
       environment:
             - DB_NAME=db_three
-            - HOST_NAME=db_three
+            - HOST_NAME=atm_three
       entrypoint: python
       command: app.py
     
 networks:
-    roachnet:
+    atmnet:
       driver: bridge
+
+# version: '3.9'
+# services:
+#     reverse_proxy:
+#         image: nginx
+#         container_name: reverse_proxy
+#         volumes:
+#             - ./nginx.conf:/etc/nginx/nginx.conf
+#         ports:
+#             - 8080:80
+#         deploy:
+#         networks:       
+#             - custom
+#         depends_on:
+#             - atm_one
+#             - atm_two
+#             - atm_three
+    
+#     atm_one:
+#         image: mbq:latest
+#         container_name: atm_one
+#         hostname: atm_one
+#         restart: always
+#         deploy: 
+#             replicas: 1
+#         networks:       
+#             - custom
+#         entrypoint: python
+#         command: -u ./app.py
+#         depends_on:
+#             db_one:
+#                     condition: service_healthy
+#         environment:
+#             - DB_NAME=manager_db
+#             - HOST_NAME=main_db_three
+
+#     read_manager_one:
+#         image: mbq:latest
+#         container_name: read_manager_one
+#         deploy:
+#             replicas: 1
+#         restart: always
+#         networks:       
+#             - custom
+#         entrypoint: python
+#         command: -u ./ServiceProviders/RMWrapper.py
+#         hostname: read_manager_one
+#         depends_on:
+#             main_db_one:
+#                     condition: service_healthy
+#         environment:
+#             - DB_NAME=manager_db
+#             - HOST_NAME=main_db_one
+
+#     read_manager_two:
+#         image: mbq:latest
+#         container_name: read_manager_two
+#         deploy:
+#             replicas: 1
+#         restart: always
+
+#         networks:       
+#             - custom
+#         entrypoint: python
+#         command: -u ./ServiceProviders/RMWrapper.py
+#         hostname: read_manager_two
+#         depends_on:
+#             main_db_two:
+#                     condition: service_healthy
+#         environment:
+#             - DB_NAME=manager_db
+#             - HOST_NAME=main_db_two
+
+
+# main_db_one: 
+#         image: postgres:13
+#         container_name: main_db_one
+#         restart: always
+#         volumes:
+#                 - ../data/main_db_one:/var/lib/postgresql/data
+#                 - ./our-postgres.conf:/etc/postgresql/postgresql.conf
+#                 - ./our-pg_hba.conf:/etc/postgresql/pg_hba.conf
+#                 - ./init-db-read.sh:/docker-entrypoint-initdb.d/init-db.sh
+#         hostname: main_db_one
+#         environment:
+#                 - 'POSTGRES_PASSWORD=postgres'
+#                 - 'POSTGRES_DB=manager_db'
+#         healthcheck:
+#             test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres --dbname manager_db'"]
+#             interval: 10s
+#             timeout: 5s
+#             retries: 3
+#         networks:       
+#             - custom
+#         depends_on:
+#             main_db_three:
+#                     condition: service_healthy
+
+# networks:
+#     custom:
+#         driver: bridge
