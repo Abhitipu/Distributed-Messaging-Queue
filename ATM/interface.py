@@ -1,5 +1,6 @@
 import requests
 import argparse
+import os
 
 class ATMClient():
     def __init__(self, ip, port):
@@ -70,14 +71,17 @@ class ATMClient():
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--port", help="port number",
-                        type=int, default=5000)
-    parser.add_argument("-ip", "--ip", help="ip address",
-                        type=str, default="0.0.0.0")
-    args = parser.parse_args()
-
-    client = ATMClient(args.ip, args.port)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("-p", "--port", help="port number",
+    #                     type=int, default=5000)
+    # parser.add_argument("-ip", "--ip", help="ip address",
+    #                     type=str, default="0.0.0.0")
+    # args = parser.parse_args()
+    ip = os.environ.get("HOST_NAME")
+    port = os.environ.get("PORT")
+    ip = "127.0.0.1"
+    port = 8081
+    client = ATMClient(ip, port)    
     # create an event loop to handle user input
 
     while True:
@@ -87,7 +91,11 @@ def main():
 
         while True:
             print(">>> ", end="")
-            command = input()
+            try:
+                command = input()
+            except EOFError:
+                print(end="\n")
+                continue
             if command == "create":
                 response, account_id = client.create()
                 if response == "Failure":

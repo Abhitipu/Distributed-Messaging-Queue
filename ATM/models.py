@@ -5,26 +5,35 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-from pysyncobj import SyncObj, replicated
+from pysyncobj import SyncObj, replicated, replicated_sync, SyncObjConf
+
 
 
 class ReplicatedAccount(SyncObj):
-    def __init__(self):
-        self_addr = os.getenv('HOSTNAME')+':'+os.getenv('PORT')
-        base_broker = '_'.join(os.getenv('HOSTNAME').split('_')[:-1])
-        addr_list = []
-        for suffix in ['one', 'two', 'three']:
-            if suffix != os.getenv('HOSTNAME').split('_')[-1]:
-                addr_list.append(base_broker + '_' + suffix +
-                                 ':' + os.getenv('PORT'))
-
+    def __init__(self, *args, **kwargs):
+        if kwargs.get('self_addr') is None:
+            self_addr = os.getenv('HOSTNAME')+':'+os.getenv('PORT')
+            base_broker = '_'.join(os.getenv('HOSTNAME').split('_')[:-1])
+            addr_list = []
+            for suffix in ['one', 'two', 'three']:
+                if suffix != os.getenv('HOSTNAME').split('_')[-1]:
+                    addr_list.append(base_broker + '_' + suffix +
+                                    ':' + os.getenv('PORT'))
+        else:
+            self_addr = kwargs['self_addr']
+            addr_list = kwargs['addr_list']
+            
+        # config = SyncObjConf(fullDumpThreshold=1000,networkTimeout=0.5,
+        #              syncTimeout=0.1,autoTick=True,dynamicMembershipChange=True)
+        
         print(f"self_addr: {self_addr}")
         print(f"addr_list: {addr_list}")
         super(ReplicatedAccount, self).__init__(self_addr, addr_list)
 
+
     @replicated
-    def create(self, account_id):
-        return Account.CreateAccount(account_id)
+    def create(self):
+        return Account.CreateAccount()
 
     @replicated
     def deposit(self, account_id, amount):

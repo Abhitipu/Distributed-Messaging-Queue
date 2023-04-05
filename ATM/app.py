@@ -30,9 +30,26 @@ app.config['SQLALCHEMY_ECHO'] = False
 app.config['DEBUG'] = True
 db.init_app(app)
 
+_replicated_account: ReplicatedAccount = None
+
+def create_sync_obj():
+    global _replicated_account
+    if _replicated_account:
+        return
+
+    _replicated_account = ReplicatedAccount(self_addr = 'localhost:5000',addr_list=[])
+    _replicated_account.waitBinded()
+    # _replicated_account.waitReady()
+
+    print('Sync object is created')
 
 
-replicated_account = ReplicatedAccount()
+def replicated_account():
+    global _replicated_account
+    if _replicated_account:
+        return _replicated_account
+
+    raise Exception('Sync object is not created')
 
 @app.route('/', methods=['GET'])
 def home():
@@ -59,7 +76,7 @@ def home():
 
 @app.route('/create', methods=['POST'])
 def create():
-    account_id = ReplicatedAccount.create()
+    account_id = replicated_account().create(sync=True)
     response = {
         "status": "Success",
         "account_id": account_id
@@ -70,7 +87,7 @@ def create():
 @app.route('/withdraw', methods=['POST'])
 def withdraw():
     dict = request.get_json()
-    status = ReplicatedAccount.withdraw(dict['account_id'], dict['amount'])
+    status = replicated_account().withdraw(dict['account_id'], dict['amount'])
     
     if status == -1:
         response = {
@@ -93,7 +110,7 @@ def withdraw():
 @app.route('/deposit', methods=['POST'])
 def deposit():
     dict = request.get_json()
-    status = ReplicatedAccount.deposit(dict['account_id'], dict['amount'])
+    status = replicated_account().deposit(dict['account_id'], dict['amount'])
     
     if status == -1:
         response = {
@@ -131,7 +148,7 @@ def get_balance():
 @app.route('/transfer', methods=['POST'])
 def transfer():
     dict = request.get_json()
-    status = ReplicatedAccount.transfer(dict['from_account_id'], dict['to_account_id'], dict['amount'])
+    status = replicated_account().transfer(dict['from_account_id'], dict['to_account_id'], dict['amount'])
     
     if status == -1:
         response = {
@@ -152,8 +169,50 @@ def transfer():
     return response
 
 
+import threading
+import time
+
+def singleTickFunc(o, timeToTick, interval, stopFunc):
+    currTime = time.time()
+    finishTime = currTime + timeToTick
+    while time.time() < finishTime:
+        o._onTick(interval)
+        if stopFunc is not None:
+            if stopFunc():
+                break
+            
+def doTicks(objects, timeToTick, interval=0.05, stopFunc=None):
+    threads = []
+    for o in objects:
+        t = threading.Thread(target=singleTickFunc, args=(o, timeToTick, interval, stopFunc))
+        t.start()
+        threads.append(t)
+    for t in threads:
+        t.join()
+        
 if __name__ == '__main__':
     with app.app_context():
         db.create_all() # <--- create db object.
+        create_sync_obj()
+
 	
-    app.run(host='0.0.0.0')
+    # print(replicated_account()._isReady())
+    # # print(replicated_account2._isReady())
+    # # print(replicated_account3._isReady())
+    
+    # objs = [replicated_account]
+    
+    # doTicks(objs, 10.0, stopFunc=lambda: replicated_account._isReady() )
+    # replicated_account.waitBinded()
+    # replicated_account._printStatus()
+    
+    # print(replicated_account._isReady())
+    
+    # # print(replicated_account2._isReady())
+    # # print(replicated_account3._isReady())
+    
+    # print(replicated_account._getLeader())
+    # print(replicated_account2._getLeader())
+    # print(replicated_account3._getLeader())
+    
+    app.run(host='0.0.0.0',port = 8081,threaded=True,debug=False)
