@@ -30,7 +30,7 @@ db_url = f"{DATABASE_CONFIG['driver']}://{DATABASE_CONFIG['user']}:{DATABASE_CON
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
-# migrate = Migrate(app, db)
+migrate = Migrate(app, db)
 
 broker_id = None
 
@@ -45,6 +45,7 @@ def create_sync_obj():
     broker = LoggingQueue()
     # broker.waitBinded()
     # broker.waitReady()
+    print('Sync object first ')
     broker.wait_till_ready()
     print('Sync object is created')
 

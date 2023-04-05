@@ -81,7 +81,8 @@ services:
                     condition: service_healthy
         environment:
             - DB_NAME=db_one
-            - PORT=4321
+            - PORT1=4321
+            - PORT2=4567
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
     
@@ -96,7 +97,8 @@ services:
                     condition: service_healthy
         environment:
             - DB_NAME=db_one
-            - PORT=4321
+            - PORT1=4321
+            - PORT2=4567
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
     
@@ -111,7 +113,8 @@ services:
                     condition: service_healthy
         environment:
             - DB_NAME=db_one
-            - PORT=4321
+            - PORT1=4321
+            - PORT2=4567
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
 
@@ -126,7 +129,8 @@ services:
                     condition: service_healthy
         environment:
             - DB_NAME=db_two
-            - PORT=4321
+            - PORT1=4321
+            - PORT2=4567
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
     
@@ -141,7 +145,8 @@ services:
                     condition: service_healthy
         environment:
             - DB_NAME=db_two
-            - PORT=4321
+            - PORT1=4321
+            - PORT2=4567
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
     
@@ -156,7 +161,8 @@ services:
                     condition: service_healthy
         environment:
             - DB_NAME=db_two
-            - PORT=4321
+            - PORT1=4321
+            - PORT2=4567
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
     
@@ -172,7 +178,8 @@ services:
                     condition: service_healthy
         environment:
             - DB_NAME=db_three
-            - PORT=4321
+            - PORT1=4321
+            - PORT2=4567
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
 
@@ -187,7 +194,8 @@ services:
                     condition: service_healthy
         environment:
             - DB_NAME=db_three
-            - PORT=4321
+            - PORT1=4321
+            - PORT2=4567
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
 
@@ -202,7 +210,8 @@ services:
                     condition: service_healthy
         environment:
             - DB_NAME=db_three
-            - PORT=4321
+            - PORT1=4321
+            - PORT2=4567
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
 

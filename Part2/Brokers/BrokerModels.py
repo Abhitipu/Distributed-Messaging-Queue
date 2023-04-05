@@ -63,21 +63,22 @@ class TopicName(db.Model):
 
     @staticmethod
     def CheckTopic(topic_name, partition_id):
-        topic = TopicName.query.filter_by(
-            topic_name=topic_name, partition_id=partition_id).first()
+        with get_app().app_context():
+            topic = TopicName.query.filter_by(
+                topic_name=topic_name, partition_id=partition_id).first()
         return True if topic else False
 
 
 class ReplicatedTopicName(SyncObj):
 
     def __init__(self):
-        self_addr = os.getenv('HOSTNAME')+':'+os.getenv('PORT')
+        self_addr = os.getenv('HOSTNAME')+':'+os.getenv('PORT1')
         base_broker = '_'.join(os.getenv('HOSTNAME').split('_')[:-1])
         addr_list = []
         for suffix in ['one', 'two', 'three']:
             if suffix != os.getenv('HOSTNAME').split('_')[-1]:
                 addr_list.append(base_broker + '_' + suffix +
-                                 ':' + os.getenv('PORT'))
+                                 ':' + os.getenv('PORT1'))
 
         print(f"self_addr: {self_addr}")
         print(f"addr_list: {addr_list}")
@@ -107,7 +108,7 @@ class TopicMessage(db.Model):
         self.partition_id = partition_id
         self.message = message
     def __repr__(self):
-        return f"{self.id} {self.topic_name} {self.producer_id} {self.message}"
+        return f"{self.id} {self.topic_name} {self.partition_id} {self.message}"
 
     @staticmethod
     def addMessage(message, topic_name, partition_id):
@@ -117,7 +118,7 @@ class TopicMessage(db.Model):
             return -2
 
         topic = TopicMessage(topic_name, partition_id, message)
-        print(topic,file=sys.stderr)
+        # print(topic,file=sys.stderr)
         with get_app().app_context():
             try:
                 db.session.add(topic)
@@ -130,33 +131,35 @@ class TopicMessage(db.Model):
 
     @staticmethod
     def retrieveMessage(topic_name, partition_id, offset):
-        left_messages = TopicMessage.getSizeforTopic(
-            topic_name, partition_id, offset)
-        if (left_messages <= 0):
-            return -1
-        data = TopicMessage.query.filter_by(
-            topic_name=topic_name, partition_id=partition_id).order_by(TopicMessage.id).offset(offset).first()
-        assert data.message is not None, "Message is None"
-        return data.message
+        with get_app().app_context():
+            left_messages = TopicMessage.getSizeforTopic(
+                topic_name, partition_id, offset)
+            if (left_messages <= 0):
+                return -1
+            data = TopicMessage.query.filter_by(
+                topic_name=topic_name, partition_id=partition_id).order_by(TopicMessage.id).offset(offset).first()
+            assert data.message is not None, "Message is None"
+            return data.message
 
     @staticmethod
     def getSizeforTopic(topic_name, partition_id, offset):
-        print(type(partition_id))
-        # offset is 0-indexed
-        return TopicMessage.query.filter_by(topic_name=topic_name, partition_id=partition_id).count() - offset
+        with get_app().app_context():
+            print(type(partition_id))
+            # offset is 0-indexed
+            return TopicMessage.query.filter_by(topic_name=topic_name, partition_id=partition_id).count() - offset
 
 
 
 class ReplicatedTopicMessage(SyncObj):
 
     def __init__(self):
-        self_addr = os.getenv('HOSTNAME')+':'+os.getenv('PORT')
+        self_addr = os.getenv('HOSTNAME')+':'+os.getenv('PORT2')
         base_broker = '_'.join(os.getenv('HOSTNAME').split('_')[:-1])
         addr_list = []
         for suffix in ['one', 'two', 'three']:
             if suffix != os.getenv('HOSTNAME').split('_')[-1]:
                 addr_list.append(base_broker + '_' + suffix +
-                                 ':' + os.getenv('PORT'))
+                                 ':' + os.getenv('PORT2'))
 
         print(f"self_addr: {self_addr}")
         print(f"addr_list: {addr_list}")

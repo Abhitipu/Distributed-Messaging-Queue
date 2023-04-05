@@ -3,7 +3,7 @@ from typing import Dict, List, Tuple, Set
 from BrokerModels import ReplicatedTopicName, ReplicatedTopicMessage
 import requests
 from time import sleep
-
+import sys 
 class LoggingQueue():
     def __init__(self):
         self.ReplicatedTopicName_obj = ReplicatedTopicName()
@@ -14,11 +14,18 @@ class LoggingQueue():
     #     self.ReplicatedTopicMessage_obj.set_app(app)
 
     def wait_till_ready(self):
+        print("hi before bind 1 ",file=sys.stderr)
         self.ReplicatedTopicName_obj.waitBinded()
+        print("hi before read 1 ",file=sys.stderr)
         self.ReplicatedTopicName_obj.waitReady()
+        print("hi before bind 2 ",file=sys.stderr)
+        
         self.ReplicatedTopicMessage_obj.waitBinded()
+        print("hi before read 2 ",file=sys.stderr)
+        
         self.ReplicatedTopicMessage_obj.waitReady()
-
+        print("hi after read 2 ",file=sys.stderr)
+        
     def heartbeat(self, ip: str, port: int, broker_id, self_port) -> None:
         data = {"broker_id": broker_id, "port": self_port}
         send_url = f"http://{ip}:{port}/broker/receive_beat"
