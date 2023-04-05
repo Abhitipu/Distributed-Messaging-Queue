@@ -1,15 +1,23 @@
 
 from typing import Dict, List, Tuple, Set
-from BrokerModels import db, ReplicatedTopicName, ReplicatedTopicMessage
+from BrokerModels import ReplicatedTopicName, ReplicatedTopicMessage
 import requests
 from time import sleep
 
-
 class LoggingQueue():
-    def __init__(self,app):
-        self.app = app
-        self.ReplicatedTopicName_obj = ReplicatedTopicName(app)
-        self.ReplicatedTopicMessage_obj = ReplicatedTopicMessage(app)
+    def __init__(self):
+        self.ReplicatedTopicName_obj = ReplicatedTopicName()
+        self.ReplicatedTopicMessage_obj = ReplicatedTopicMessage()
+
+    # def set_app(self,app):
+    #     self.ReplicatedTopicName_obj.set_app(app)
+    #     self.ReplicatedTopicMessage_obj.set_app(app)
+
+    def wait_till_ready(self):
+        self.ReplicatedTopicName_obj.waitBinded()
+        self.ReplicatedTopicMessage_obj.waitBinded()
+        self.ReplicatedTopicName_obj.waitReady()
+        self.ReplicatedTopicMessage_obj.waitReady()
 
     def heartbeat(self, ip: str, port: int, broker_id, self_port) -> None:
         data = {"broker_id": broker_id, "port": self_port}
@@ -29,7 +37,7 @@ class LoggingQueue():
     def create_topic(self, topic_name: str, partition_id) -> None:
         if not self.ReplicatedTopicName_obj.CheckTopic(topic_name=topic_name, partition_id=partition_id):
             self.ReplicatedTopicName_obj.CreateTopic(topic_name=topic_name,
-                                  partition_id=partition_id)
+                                  partition_id=partition_id,sync=True)
             print(f"Topic {topic_name} with partition {partition_id} created.")
             return 1
         else:
@@ -44,11 +52,11 @@ class LoggingQueue():
     def enqueue(self, message: str, topic: str, partition_id: int) -> int:
         # check if (topic, partition_id) exists else create it
         if not self.ReplicatedTopicName_obj.CheckTopic(topic_name=topic, partition_id=partition_id):
-            self.ReplicatedTopicName_obj.CreateTopic(topic_name=topic, partition_id=partition_id)
+            self.ReplicatedTopicName_obj.CreateTopic(topic_name=topic, partition_id=partition_id,sync=True)
             print(f"Topic {topic} with partition {partition_id} created.")
 
         status = self.ReplicatedTopicMessage_obj.addMessage(
-            topic_name=topic, partition_id=partition_id, message=message)
+            topic_name=topic, partition_id=partition_id, message=message,sync=True)
         if status == 1:
             print(
                 f"Message '{message}' added to topic {topic} with partition {partition_id}.")

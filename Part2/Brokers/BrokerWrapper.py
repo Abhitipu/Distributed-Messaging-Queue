@@ -2,7 +2,7 @@ from flask import Flask, request
 from Broker import LoggingQueue
 from flask_migrate import Migrate
 from BrokerModels import db, ID
-
+import logging 
 from concurrent.futures import ThreadPoolExecutor
 import socket
 import uuid
@@ -12,27 +12,12 @@ from time import sleep
 import requests
 from threading import Thread
 import os
-app = Flask(__name__)
+from create_app import get_app
 
-DATABASE_CONFIG = {
-    'driver': 'postgresql',
-    'host': os.getenv('DB_NAME') + '_' + os.getenv('HOSTNAME').split('_')[-1],
-    'user': 'postgres',
-    'password': 'postgres',
-    'port': 5432,
-    'dbname': os.getenv('DB_NAME')
-}
-db_url = f"{DATABASE_CONFIG['driver']}://{DATABASE_CONFIG['user']}:{DATABASE_CONFIG['password']}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['dbname']}"
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+broker = LoggingQueue()
+# broker.wait_till_ready()
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-db.init_app(app)
-migrate = Migrate(app, db)
-
-broker = LoggingQueue(app)
-
-# TODO : Add database schemas
+app = get_app()
 
 broker_id = None
 
@@ -53,6 +38,9 @@ def enqueue():
     partition_id = dict['partition_id']
     message = dict['message']
     # import ipdb; ipdb.set_trace()
+    # app.app_context().push()
+
+    
     status = broker.enqueue(message=message, topic=topic,
                             partition_id=partition_id)
     response = {}
@@ -73,6 +61,9 @@ def dequeue():
     partition_id = (dict['partition_id'])
     offset = (dict['offset'])
     # if topic exists send consumer id
+    # app.app_context().push()
+    
+    
     status = broker.dequeue(
         topic_name=topic, partition_id=partition_id, offset=offset)
     response = {}
@@ -98,7 +89,8 @@ def size():
     topic = (dict['topic_name'])
     partition_id = (dict['partition_id'])
     offset = (dict['offset'])
-
+    # app.app_context().push()
+    
     status = broker.size(
         topic_name=topic, partition_id=partition_id, offset=offset)
     response = {}
@@ -145,6 +137,7 @@ def register(mIP, mPort, p):
 # python BrokerWrapper.py -p 8082 -mIP 127.0.0.1 -mPort 8080
 
 
+
 def cmdline_args():
     # create parser
     parser = argparse.ArgumentParser()
@@ -162,11 +155,31 @@ def cmdline_args():
 
 
 if __name__ == '__main__':
+
+    # logging.basicConfig(level=logging.DEBUG)
+    
+    logging.warning("text")
+    DATABASE_CONFIG = {
+        'driver': 'postgresql',
+        'host': os.getenv('DB_NAME') + '_' + os.getenv('HOSTNAME').split('_')[-1],
+        'user': 'postgres',
+        'password': 'postgres',
+        'port': 5432,
+        'dbname': os.getenv('DB_NAME')
+    }
+    db_url = f"{DATABASE_CONFIG['driver']}://{DATABASE_CONFIG['user']}:{DATABASE_CONFIG['password']}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['dbname']}"
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    db.init_app(app)
+    migrate = Migrate(app, db)
+    
     args = cmdline_args()
 
     # global broker
     with app.app_context():
         db.create_all()  # <--- create db object.
+        # broker.set_app(app)
+        # app.app_context().push()
         broker_id = ID.getID()
         if (broker_id == -1):
             hostname = socket.gethostname()
@@ -181,17 +194,18 @@ if __name__ == '__main__':
                 # ipdb.set_trace()
                 if response != -1:
                     broker_id = response
-                    ID.createID(broker_id,app)
+                    ID.createID(broker_id,)
                     break
                 sleep(randint(1, 3))
 
     # with ThreadPoolExecutor(max_workers=1) as executor:
     #     executor.submit(broker.heartbeat, args.managerIP, args.managerPort, broker_id)
+    
     executor = Thread(target=broker.heartbeat, args=(
         args.managerIP, args.managerPort, broker_id, args.port))
     executor.daemon = True
     executor.start()
-    app.run(host='0.0.0.0', port=args.port)
+    app.run(host='0.0.0.0', port=args.port, threaded=False)
 
     # TODO remove reloader = false if needed
     # app.run(debug=True, port=args.port, use_reloader=False)
