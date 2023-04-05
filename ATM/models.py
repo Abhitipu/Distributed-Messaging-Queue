@@ -7,33 +7,29 @@ db = SQLAlchemy()
 
 from pysyncobj import SyncObj, replicated, replicated_sync, SyncObjConf
 
+from create_app import get_app
 
 
 class ReplicatedAccount(SyncObj):
-    def __init__(self, *args, **kwargs):
-        if kwargs.get('self_addr') is None:
-            self_addr = os.getenv('HOSTNAME')+':'+os.getenv('PORT')
-            base_broker = '_'.join(os.getenv('HOSTNAME').split('_')[:-1])
-            addr_list = []
-            for suffix in ['one', 'two', 'three']:
-                if suffix != os.getenv('HOSTNAME').split('_')[-1]:
-                    addr_list.append(base_broker + '_' + suffix +
-                                    ':' + os.getenv('PORT'))
-        else:
-            self_addr = kwargs['self_addr']
-            addr_list = kwargs['addr_list']
-            
-        # config = SyncObjConf(fullDumpThreshold=1000,networkTimeout=0.5,
-        #              syncTimeout=0.1,autoTick=True,dynamicMembershipChange=True)
-        
+    def __init__(self, self_addr=None, addr_list=None):
+        self_addr = os.getenv('HOSTNAME')+':'+os.getenv('PORT')
+        base_broker = '_'.join(os.getenv('HOSTNAME').split('_')[:-1])
+        addr_list = []
+        for suffix in ['one', 'two', 'three']:
+            if suffix != os.getenv('HOSTNAME').split('_')[-1]:
+                addr_list.append(base_broker + '_' + suffix +
+                                 ':' + os.getenv('PORT'))
         print(f"self_addr: {self_addr}")
         print(f"addr_list: {addr_list}")
         super(ReplicatedAccount, self).__init__(self_addr, addr_list)
 
-
     @replicated
+    def _create(self,account_id):
+        return Account.CreateAccount(account_id)
+
     def create(self):
-        return Account.CreateAccount()
+        account_id = uuid.uuid4()
+        return self._create(account_id,sync=True)
 
     @replicated
     def deposit(self, account_id, amount):
@@ -51,6 +47,7 @@ class Account(db.Model):
     __tablename__ = 'Account'
     account_id = db.Column(db.String, primary_key=True)
     balance = db.Column(db.Integer)
+    app = get_app()
 
     def __init__(self, account_id, balance):
         self.account_id = account_id
@@ -61,58 +58,64 @@ class Account(db.Model):
 
     @staticmethod
     def ListAccounts():
-        return Account.query.all()
+        with get_app().app_context():
+            return Account.query.all()
 
     @staticmethod
     def CheckBalance(account_id):
-        if Account.CheckAccountExists(account_id) is False:
-            return -1
-        return Account.query.filter_by(account_id=account_id).first().balance
+        with get_app().app_context():
+            if Account.CheckAccountExists(account_id) is False:
+                return -1
+            return Account.query.filter_by(account_id=account_id).first().balance
 
     @staticmethod
     def CheckAccountExists(account_id):
-        return Account.query.filter_by(account_id=account_id).first() is not None
+        with get_app().app_context():
+            return Account.query.filter_by(account_id=account_id).first() is not None
 
     @staticmethod
-    def CreateAccount():
-        account_id = uuid.uuid4()
-        account = Account(account_id, 0)
-        db.session.add(account)
-        db.session.commit()
-        return account_id
-    
+    def CreateAccount(account_id):
+        with get_app().app_context():
+            account = Account(account_id, 0)
+            db.session.add(account)
+            db.session.commit()
+            return account_id
+        
     @staticmethod
     def Deposit(account_id, amount):
-        print("Deposit")
-        if Account.CheckAccountExists(account_id) is False:
-            return -1
-        
-        account = Account.query.filter_by(account_id=account_id).first()
-        account.balance += int(amount)
-        db.session.commit()
-        return 1
+        with get_app().app_context():
+            print("Deposit")
+            if Account.CheckAccountExists(account_id) is False:
+                return -1
+            
+            account = Account.query.filter_by(account_id=account_id).first()
+            account.balance += int(amount)
+            db.session.commit()
+            return 1
     
     @staticmethod
     def Withdraw(account_id, amount):
-        amount = int(amount)
-        if Account.CheckAccountExists(account_id) is False:
-            return -1
-        
-        account = Account.query.filter_by(account_id=account_id).first()
-        if account.balance - amount < 0:
-            return -2
-        account.balance -= amount
-        db.session.commit()
-        return 1
+        with get_app().app_context():
+            amount = int(amount)
+            if Account.CheckAccountExists(account_id) is False:
+                return -1
+            
+            account = Account.query.filter_by(account_id=account_id).first()
+            if account.balance - amount < 0:
+                return -2
+            account.balance -= amount
+            db.session.commit()
+            return 1
 
     @staticmethod
     def Transfer(from_account_id, to_account_id, amount):
-        amount = int(amount)
-        if Account.CheckAccountExists(from_account_id) is False or Account.CheckAccountExists(to_account_id) is False:
-            return -1
-        
-        if Account.Withdraw(from_account_id, amount) < 0:
-            return -2
-        Account.Deposit(to_account_id, amount)
-        return 1
+        with get_app().app_context():
+            amount = int(amount)
+            if Account.CheckAccountExists(from_account_id) is False or Account.CheckAccountExists(to_account_id) is False:
+                return -1
+            
+            if Account.Withdraw(from_account_id, amount) < 0:
+                return -2
+            Account.Deposit(to_account_id, amount)
+            return 1
     

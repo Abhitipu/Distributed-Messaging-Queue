@@ -76,31 +76,14 @@ services:
       entrypoint: python
       command: app.py
     
-    interface_one:
-      image: interface:latest
-      container_name: interface_one
-      hostname: interface_one
-      tty: true
-      stdin_open: true
-      networks:
-        - atmnet
-      restart: always
-      depends_on:
-        - atm_one
-      environment:
-            - HOST_NAME=atm_one
-            - PORT=8080
-      # entrypoint: python
-      # command: interface.py
-        
-
     atm_two: 
       image: atm:latest
       container_name: atm_two
       hostname: atm_two
       networks:
-
         - atmnet
+      ports:
+        - 8082:8081
       restart: always
       depends_on:
         db_two : 
@@ -119,6 +102,8 @@ services:
       hostname: atm_three
       networks:
         - atmnet
+      ports:
+        - 8083:8081
       restart: always
       depends_on:
         db_one : 

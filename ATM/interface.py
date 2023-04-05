@@ -41,7 +41,6 @@ class ATMClient():
         url = f"http://{self.ip}:{self.port}/transfer"
         response = requests.post(url, json={"to_account_id": to_account_id, "amount": amount, "from_account_id": self.id})
         response = response.json()
-        
         if response["status"] == "Success":
             return "Success"
         else:
@@ -71,17 +70,13 @@ class ATMClient():
 
 
 def main():
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("-p", "--port", help="port number",
-    #                     type=int, default=5000)
-    # parser.add_argument("-ip", "--ip", help="ip address",
-    #                     type=str, default="0.0.0.0")
-    # args = parser.parse_args()
-    ip = os.environ.get("HOST_NAME")
-    port = os.environ.get("PORT")
-    ip = "127.0.0.1"
-    port = 8081
-    client = ATMClient(ip, port)    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--port", help="port number",
+                         type=int, default=8081)
+    parser.add_argument("-ip", "--ip", help="ip address",
+                         type=str, default="0.0.0.0")
+    args = parser.parse_args()
+    client = ATMClient(args.ip, args.port)    
     # create an event loop to handle user input
 
     while True:

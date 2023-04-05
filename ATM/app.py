@@ -8,8 +8,10 @@ import sqlalchemy.orm
 import os
 from models import Account, db, ReplicatedAccount
 
+from create_app import get_app
 
-app = Flask(__name__)
+app = get_app()
+
 DATABASE_CONFIG = {
     'driver': 'postgresql',
     'host': os.getenv('DB_NAME'),
@@ -37,9 +39,9 @@ def create_sync_obj():
     if _replicated_account:
         return
 
-    _replicated_account = ReplicatedAccount(self_addr = 'localhost:5000',addr_list=[])
+    _replicated_account = ReplicatedAccount()
     _replicated_account.waitBinded()
-    # _replicated_account.waitReady()
+    _replicated_account.waitReady()
 
     print('Sync object is created')
 
@@ -76,7 +78,7 @@ def home():
 
 @app.route('/create', methods=['POST'])
 def create():
-    account_id = replicated_account().create(sync=True)
+    account_id = replicated_account().create()
     response = {
         "status": "Success",
         "account_id": account_id
@@ -87,7 +89,7 @@ def create():
 @app.route('/withdraw', methods=['POST'])
 def withdraw():
     dict = request.get_json()
-    status = replicated_account().withdraw(dict['account_id'], dict['amount'])
+    status = replicated_account().withdraw(dict['account_id'], dict['amount'],sync=True)
     
     if status == -1:
         response = {
@@ -110,7 +112,7 @@ def withdraw():
 @app.route('/deposit', methods=['POST'])
 def deposit():
     dict = request.get_json()
-    status = replicated_account().deposit(dict['account_id'], dict['amount'])
+    status = replicated_account().deposit(dict['account_id'], dict['amount'],sync=True)
     
     if status == -1:
         response = {
@@ -148,8 +150,7 @@ def get_balance():
 @app.route('/transfer', methods=['POST'])
 def transfer():
     dict = request.get_json()
-    status = replicated_account().transfer(dict['from_account_id'], dict['to_account_id'], dict['amount'])
-    
+    status = replicated_account().transfer(dict['from_account_id'], dict['to_account_id'], dict['amount'],sync=True)
     if status == -1:
         response = {
             "status": "Failure",
