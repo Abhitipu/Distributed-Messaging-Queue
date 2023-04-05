@@ -15,8 +15,8 @@ class LoggingQueue():
 
     def wait_till_ready(self):
         self.ReplicatedTopicName_obj.waitBinded()
-        self.ReplicatedTopicMessage_obj.waitBinded()
         self.ReplicatedTopicName_obj.waitReady()
+        self.ReplicatedTopicMessage_obj.waitBinded()
         self.ReplicatedTopicMessage_obj.waitReady()
 
     def heartbeat(self, ip: str, port: int, broker_id, self_port) -> None:

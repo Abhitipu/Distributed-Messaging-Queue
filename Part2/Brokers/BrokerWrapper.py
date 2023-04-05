@@ -14,19 +14,51 @@ from threading import Thread
 import os
 from create_app import get_app
 
-broker = LoggingQueue()
-# broker.wait_till_ready()
 
 app = get_app()
+
+logging.warning("text")
+DATABASE_CONFIG = {
+    'driver': 'postgresql',
+    'host': os.getenv('DB_NAME') + '_' + os.getenv('HOSTNAME').split('_')[-1],
+    'user': 'postgres',
+    'password': 'postgres',
+    'port': 5432,
+    'dbname': os.getenv('DB_NAME')
+}
+db_url = f"{DATABASE_CONFIG['driver']}://{DATABASE_CONFIG['user']}:{DATABASE_CONFIG['password']}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['dbname']}"
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
+# migrate = Migrate(app, db)
 
 broker_id = None
 
 
+broker: LoggingQueue = None
+
+def create_sync_obj():
+    global broker
+    if broker:
+        return
+
+    broker = LoggingQueue()
+    # broker.waitBinded()
+    # broker.waitReady()
+    broker.wait_till_ready()
+    print('Sync object is created')
+
+
+def replicated_account():
+    global broker
+    if broker:
+        return broker
+
+    raise Exception('Sync object is not created')
+
 @app.route('/')
 def hello_world():
     return "<h1> Hello WOrld wow</h1>"
-
-# todo: add topic name and partition id endpoint
 
 
 @app.route("/producer/produce", methods=["POST"])
@@ -158,26 +190,13 @@ if __name__ == '__main__':
 
     # logging.basicConfig(level=logging.DEBUG)
     
-    logging.warning("text")
-    DATABASE_CONFIG = {
-        'driver': 'postgresql',
-        'host': os.getenv('DB_NAME') + '_' + os.getenv('HOSTNAME').split('_')[-1],
-        'user': 'postgres',
-        'password': 'postgres',
-        'port': 5432,
-        'dbname': os.getenv('DB_NAME')
-    }
-    db_url = f"{DATABASE_CONFIG['driver']}://{DATABASE_CONFIG['user']}:{DATABASE_CONFIG['password']}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['dbname']}"
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    db.init_app(app)
-    migrate = Migrate(app, db)
     
     args = cmdline_args()
 
     # global broker
     with app.app_context():
         db.create_all()  # <--- create db object.
+        create_sync_obj()
         # broker.set_app(app)
         # app.app_context().push()
         broker_id = ID.getID()
@@ -205,7 +224,7 @@ if __name__ == '__main__':
         args.managerIP, args.managerPort, broker_id, args.port))
     executor.daemon = True
     executor.start()
-    app.run(host='0.0.0.0', port=args.port, threaded=False)
+    app.run(host='0.0.0.0', port=args.port, debug=False)
 
     # TODO remove reloader = false if needed
     # app.run(debug=True, port=args.port, use_reloader=False)

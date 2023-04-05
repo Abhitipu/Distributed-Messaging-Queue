@@ -44,34 +44,25 @@ class TopicName(db.Model):
 
     def __repr__(self):
         return f"{self.topic_name} {self.partition_id}"
-    
 
-class WrappedTopicName(object):
-
-    def __init__(self):
-        self.db = db
-        self.app = get_app()
-        # Session = scoped_session(sessionmaker(bind=db.engine))
-        # self.session = Session()
-
-        
-    def ListTopics(self):
+    @staticmethod
+    def ListTopics():
         return [(topic.topic_name, topic.partition_id) for topic in TopicName.query.all()]
 
-    
-    def CreateTopic(self,topic_name, partition_id):
+    @staticmethod
+    def CreateTopic(topic_name, partition_id):
         topic = TopicName(topic_name, partition_id)
-        with self.app.app_context():
+        with get_app().app_context():
             try:
-                self.db.session.add(topic)
-                self.db.session.commit()
+                db.session.add(topic)
+                db.session.commit()
             except Exception as e:
                 print(e,file=sys.stderr)
-                self.db.session.rollback()
+                db.session.rollback()
                 return -1
 
-    
-    def CheckTopic(self,topic_name, partition_id):
+    @staticmethod
+    def CheckTopic(topic_name, partition_id):
         topic = TopicName.query.filter_by(
             topic_name=topic_name, partition_id=partition_id).first()
         return True if topic else False
@@ -92,16 +83,15 @@ class ReplicatedTopicName(SyncObj):
         print(f"addr_list: {addr_list}")
         super(ReplicatedTopicName, self).__init__(self_addr, addr_list)
 
-
     @replicated
     def CreateTopic(self, topic_name, partition_id):
-        return WrappedTopicName().CreateTopic(topic_name, partition_id)
+        return TopicName.CreateTopic(topic_name, partition_id)
 
     def CheckTopic(self, topic_name, partition_id):
-        return WrappedTopicName().CheckTopic(topic_name, partition_id)
+        return TopicName.CheckTopic(topic_name, partition_id)
 
     def ListTopics(self):
-        return WrappedTopicName().ListTopics()
+        return TopicName.ListTopics()
 
 
 class TopicMessage(db.Model):
@@ -119,16 +109,8 @@ class TopicMessage(db.Model):
     def __repr__(self):
         return f"{self.id} {self.topic_name} {self.producer_id} {self.message}"
 
-
-class WrappedTopicMessage(object):
-    def __init__(self):
-        # self.db = db
-        self.db = db
-        self.app = get_app()
-        # Session = scoped_session(sessionmaker(bind=db.engine))
-        # self.db.session = Session()
-
-    def addMessage(self, message, topic_name, partition_id):
+    @staticmethod
+    def addMessage(message, topic_name, partition_id):
         if not TopicName.CheckTopic(topic_name=topic_name, partition_id=partition_id):
             print(
                 f"Topic {topic_name} with partition {partition_id} does not exist.",file=sys.stderr)
@@ -136,17 +118,18 @@ class WrappedTopicMessage(object):
 
         topic = TopicMessage(topic_name, partition_id, message)
         print(topic,file=sys.stderr)
-        with self.app.app_context():
+        with get_app().app_context():
             try:
-                self.db.session.add(topic)
-                self.db.session.commit()
+                db.session.add(topic)
+                db.session.commit()
             except Exception as e:
                 print(e,file=sys.stderr)
-                self.db.session.rollback()
+                db.session.rollback()
                 return -1
             return 1
 
-    def retrieveMessage(self,topic_name, partition_id, offset):
+    @staticmethod
+    def retrieveMessage(topic_name, partition_id, offset):
         left_messages = TopicMessage.getSizeforTopic(
             topic_name, partition_id, offset)
         if (left_messages <= 0):
@@ -156,8 +139,8 @@ class WrappedTopicMessage(object):
         assert data.message is not None, "Message is None"
         return data.message
 
-    
-    def getSizeforTopic(self,topic_name, partition_id, offset):
+    @staticmethod
+    def getSizeforTopic(topic_name, partition_id, offset):
         print(type(partition_id))
         # offset is 0-indexed
         return TopicMessage.query.filter_by(topic_name=topic_name, partition_id=partition_id).count() - offset
@@ -183,10 +166,10 @@ class ReplicatedTopicMessage(SyncObj):
     @replicated
     def addMessage(self, message, topic_name, partition_id):
         print("Hiiiii add message replicated topic ",file=sys.stderr)
-        return WrappedTopicMessage().addMessage(message, topic_name, partition_id)
+        return TopicMessage.addMessage(message, topic_name, partition_id)
 
     def retrieveMessage(self, topic_name, partition_id, offset):
-        return WrappedTopicMessage().retrieveMessage(topic_name, partition_id, offset)
+        return TopicMessage.retrieveMessage(topic_name, partition_id, offset)
 
     def getSizeforTopic(self, topic_name, partition_id, offset):
-        return WrappedTopicMessage().getSizeforTopic(topic_name, partition_id, offset)
+        return TopicMessage.getSizeforTopic(topic_name, partition_id, offset)
