@@ -1,4 +1,6 @@
+flask
+psycopg2-binary
 flask-sqlalchemy
-sqlalchemy-cockroachdb
-requests
 Flask-Migrate
+requests
+pysyncobj

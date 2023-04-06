@@ -3,116 +3,217 @@ from flask import Flask, request, flash, url_for, redirect, \
     render_template, abort
 from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy.orm
-from cockroachdb.sqlalchemy import run_transaction
-from models import Transactions, Account
+# from cockroachdb.sqlalchemy import run_transaction
 
 import os
+from models import Account, db, ReplicatedAccount
 
-app = Flask(__name__)
+from create_app import get_app
+
+app = get_app()
+
 DATABASE_CONFIG = {
-    'driver': 'cockroachdb',
-    'host': os.getenv('HOST_NAME'),
-    'user': 'root',
-    'port': 26257,
+    'driver': 'postgresql',
+    'host': os.getenv('DB_NAME'),
+    'user': 'postgres',
+    'port': 5432,
     'dbname': os.getenv('DB_NAME'),
+    'password' : 'postgres'
 }
-db_uri = f"{DATABASE_CONFIG['driver']}://{DATABASE_CONFIG['user']}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['dbname']}?sslmode=disable"
+
+db_uri = f"{DATABASE_CONFIG['driver']}://{DATABASE_CONFIG['user']}:{DATABASE_CONFIG['password']}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['dbname']}"
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
 # app.config['SECRET_KEY'] = '\xfb\x12\xdf\xa1@i\xd6>V\xc0\xbb\x8fp\x16#Z\x0b\x81\xeb\x16'
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'application_name': f'$ atm_flask_{os.getenv("HOST_NAME")}'}
+# app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    # 'application_name': f'$ atm_flask_{os.getenv("HOST_NAME")}'}
+
 app.config['DEBUG'] = True
-db = SQLAlchemy(app)
-sessionmaker = sqlalchemy.orm.sessionmaker(db.engine)
+db.init_app(app)
+
+_replicated_account: ReplicatedAccount = None
+
+def create_sync_obj():
+    global _replicated_account
+    if _replicated_account:
+        return
+
+    _replicated_account = ReplicatedAccount()
+    _replicated_account.waitBinded()
+    _replicated_account.waitReady()
+
+    print('Sync object is created')
 
 
-class Todo(db.Model):
-    __tablename__ = 'todos'
-    id = db.Column('todo_id', db.Integer, primary_key=True)
-    title = db.Column(db.String(60))
-    text = db.Column(db.String)
-    done = db.Column(db.Boolean)
-    pub_date = db.Column(db.DateTime)
+def replicated_account():
+    global _replicated_account
+    if _replicated_account:
+        return _replicated_account
 
-    def __init__(self, title, text):
-        self.title = title
-        self.text = text
-        self.done = False
-        self.pub_date = datetime.utcnow()
+    raise Exception('Sync object is not created')
 
+@app.route('/', methods=['GET'])
+def home():
+    dict = request.get_json()
+    account_id = dict['account_id']
+    print(account_id)
+    if Account.CheckAccountExists(account_id) is False:
+        return {
+            "status": "Failure",
+        }
+    else:
+        return {
+            "status": "Success",
+        }
 
-@app.route('/')
-def show_all():
-    def callback(session):
-        return render_template(
-            'show_all.html',
-            todos=session.query(Todo).order_by(Todo.pub_date.desc()).all())
-    return run_transaction(sessionmaker, callback)
+# @app.route('/showall', methods=['GET'])
+# def show_all():
+#     all_accounts = Account.ListAccounts()
+#     response = {
+#         "status": "Success",
+#         "accounts": all_accounts 
+#     }
+#     return response
 
-
-@app.route('/new', methods=['GET', 'POST'])
-def new():
-    if request.method == 'POST':
-        if not request.form['title']:
-            flash('Title is required', 'error')
-        elif not request.form['text']:
-            flash('Text is required', 'error')
-        else:
-            def callback(session):
-                todo = Todo(request.form['title'], request.form['text'])
-                session.add(todo)
-            run_transaction(sessionmaker, callback)
-            flash(u'Todo item was successfully created')
-            return redirect(url_for('show_all'))
-    return render_template('new.html')
-
-
-@app.route('/update', methods=['POST'])
-def update_done():
-    if not request.form['account_id']:
-        flash('Account ID is required', 'error')
-    if not request.form['amount']:
-        flash('Amount is required', 'error')
-
-    def callback(session):
-        session.query(Account).filter_by(account_id=request.form['account_id'])    
-        pass
-    
-    return run_transaction(sessionmaker, callback)
-    # flash('Updated status')
-    # return redirect(url_for('show_all'))
+@app.route('/create', methods=['POST'])
+def create():
+    account_id = replicated_account().create()
+    response = {
+        "status": "Success",
+        "account_id": account_id
+    }
+    return response
 
 
 @app.route('/withdraw', methods=['POST'])
 def withdraw():
-    def callback(session):
-        # for account in session.query(Account)
-        pass
-
-    txn_details = run_transaction(sessionmaker, callback)
-    # flash('Withdrawn money')
-    return txn_details
-
+    dict = request.get_json()
+    status = replicated_account().withdraw(dict['account_id'], dict['amount'],sync=True)
+    
+    if status == -1:
+        response = {
+            "status": "Failure",
+            "message": "Incorrect account id"
+        }
+    elif status == -2:
+        response = {
+            "status": "Failure",
+            "message": "Insufficient balance"
+        }
+    else:
+        response = {
+            "status": "Success",
+            "message": "Withdraw successful"
+        }
+    
+    return response
 
 @app.route('/deposit', methods=['POST'])
 def deposit():
-    pass
+    dict = request.get_json()
+    status = replicated_account().deposit(dict['account_id'], dict['amount'],sync=True)
+    
+    if status == -1:
+        response = {
+            "status": "Failure",
+            "message": "Incorrect account id"
+        }
+    else:
+        response = {
+            "status": "Success",
+            "message": "Deposit successful"
+        }
+        
+    return response
 
 
 @app.route('/balance', methods=['GET'])
 def get_balance():
-    pass
+    dict = request.get_json()
+    balance = Account.CheckBalance(dict['account_id'])
+    
+    if balance == -1:
+        response = {
+            "status": "Failure",
+            "message": "Incorrect account id"
+        }
+    else:
+        response = {
+            "status": "Success",
+            "balance": balance
+        }
+        
+    return response
 
 
 @app.route('/transfer', methods=['POST'])
 def transfer():
-    pass
+    dict = request.get_json()
+    status = replicated_account().transfer(dict['from_account_id'], dict['to_account_id'], dict['amount'],sync=True)
+    if status == -1:
+        response = {
+            "status": "Failure",
+            "message": "Incorrect account id"
+        }
+    elif status == -2:
+        response = {
+            "status": "Failure",
+            "message": "Insufficient balance"
+        }
+    else:
+        response = {
+            "status": "Success",
+            "message": "Transfer successful"
+        }
+    
+    return response
 
 
+import threading
+import time
+
+def singleTickFunc(o, timeToTick, interval, stopFunc):
+    currTime = time.time()
+    finishTime = currTime + timeToTick
+    while time.time() < finishTime:
+        o._onTick(interval)
+        if stopFunc is not None:
+            if stopFunc():
+                break
+            
+def doTicks(objects, timeToTick, interval=0.05, stopFunc=None):
+    threads = []
+    for o in objects:
+        t = threading.Thread(target=singleTickFunc, args=(o, timeToTick, interval, stopFunc))
+        t.start()
+        threads.append(t)
+    for t in threads:
+        t.join()
+        
 if __name__ == '__main__':
     with app.app_context():
         db.create_all() # <--- create db object.
+        create_sync_obj()
+
 	
-    app.run(host='0.0.0.0')
+    # print(replicated_account()._isReady())
+    # # print(replicated_account2._isReady())
+    # # print(replicated_account3._isReady())
+    
+    # objs = [replicated_account]
+    
+    # doTicks(objs, 10.0, stopFunc=lambda: replicated_account._isReady() )
+    # replicated_account.waitBinded()
+    # replicated_account._printStatus()
+    
+    # print(replicated_account._isReady())
+    
+    # # print(replicated_account2._isReady())
+    # # print(replicated_account3._isReady())
+    
+    # print(replicated_account._getLeader())
+    # print(replicated_account2._getLeader())
+    # print(replicated_account3._getLeader())
+    
+    app.run(host='0.0.0.0',port = 8081,threaded=True,debug=False)
