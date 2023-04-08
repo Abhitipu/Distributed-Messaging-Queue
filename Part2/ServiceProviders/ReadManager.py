@@ -18,8 +18,11 @@ class ReadManager:
         idx = random.randint(0, n)
         for i in range(n):
             partition_id = partition_ids[(i+idx) %n]
-            if(BrokerMetadata.checkBroker(PartitionMetadata.getBrokerID(topic_name, partition_id)) and (ReadManager.size(consumer_id, topic_name, partition_id)>0)):
-                return partition_id
+            broker_ids = PartitionMetadata.getBrokerIDs(topic_name, partition_id)
+            
+            for broker_id in broker_ids:
+                if(BrokerMetadata.checkBroker(broker_id) and (ReadManager.size(consumer_id, topic_name, partition_id)>0)):
+                    return partition_id
         
         return -1
     
@@ -78,8 +81,12 @@ class ReadManager:
             # ReadManager.update_consumer_part_req("http://write_manager:5000/consumer/update_partition_metadata", consumer_id,new_part_metadata)
 
         offset = ConsumerMetadata.getOffset(topic_name, consumer_id, partition_id)
-        broker_id = PartitionMetadata.getBrokerID(topic_name, partition_id)
+        broker_id = None
         
+        broker_ids = PartitionMetadata.getBrokerIDs(topic_name, partition_id)
+        for b_id in broker_ids:
+            if(BrokerMetadata.checkBroker(b_id)):
+                broker_id = b_id
         broker_endpoint = BrokerMetadata.getBrokerEndpoint(broker_id)
         broker_endpoint = broker_endpoint + "/consumer/consume"
 
