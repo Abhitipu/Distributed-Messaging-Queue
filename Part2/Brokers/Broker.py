@@ -56,17 +56,24 @@ class LoggingQueue():
         topic_part_list = self.ReplicatedTopicName_obj.ListTopics()
         return topic_part_list
     
-    def enqueue(self, message: str, topic: str, partition_id: int) -> int:
+    def enqueue(self, message: str, topic: str, partition_id: int, broker_ids) -> int:
         # check if (topic, partition_id) exists else create it
         if not self.ReplicatedTopicName_obj.CheckTopic(topic_name=topic, partition_id=partition_id):
-            self.ReplicatedTopicName_obj.CreateTopic(topic_name=topic, partition_id=partition_id,sync=True)
-            print(f"Topic {topic} with partition {partition_id} created.")
+            status = self.ReplicatedTopicName_obj.CreateTopic(topic_name=topic, partition_id=partition_id, broker_ids=broker_ids, sync=True)
+            if status == 1:
+                print(f"Topic {topic} with partition {partition_id} created.")
+            else:
+                print("Topic creation not meant for this broker")
 
         status = self.ReplicatedTopicMessage_obj.addMessage(
-            topic_name=topic, partition_id=partition_id, message=message,sync=True)
+            topic_name=topic, partition_id=partition_id, message=message, broker_ids=broker_ids, sync=True)
         if status == 1:
             print(
                 f"Message '{message}' added to topic {topic} with partition {partition_id}.")
+            return 1
+        elif status == 2:
+            print(
+                f"Message not meant for this broker")
             return 1
         else:
             print(

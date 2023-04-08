@@ -85,7 +85,10 @@ class ReplicatedTopicName(SyncObj):
         super(ReplicatedTopicName, self).__init__(self_addr, addr_list)
 
     @replicated
-    def CreateTopic(self, topic_name, partition_id):
+    def CreateTopic(self, topic_name, partition_id, broker_ids):
+        broker_id = ID.getID()
+        if broker_id not in broker_ids:
+            return 2
         return TopicName.CreateTopic(topic_name, partition_id)
 
     def CheckTopic(self, topic_name, partition_id):
@@ -167,7 +170,10 @@ class ReplicatedTopicMessage(SyncObj):
 
 
     @replicated
-    def addMessage(self, message, topic_name, partition_id):
+    def addMessage(self, message, topic_name, partition_id, broker_ids):
+        broker_id = ID.getID()
+        if broker_id not in broker_ids:
+            return 2
         print("Hiiiii add message replicated topic ",file=sys.stderr)
         return TopicMessage.addMessage(message, topic_name, partition_id)
 

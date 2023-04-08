@@ -70,12 +70,15 @@ def enqueue():
     topic = dict['topic_name']
     partition_id = dict['partition_id']
     message = dict['message']
+    broker_ids = dict['broker_ids']
+    broker_ids = broker_ids.split(',')
+    broker_ids = [int(broker_id) for broker_id in broker_ids]
     # import ipdb; ipdb.set_trace()
     # app.app_context().push()
-
+    self_broker_id = ID.getID()
     
     status = broker.enqueue(message=message, topic=topic,
-                            partition_id=partition_id)
+                            partition_id=partition_id, broker_ids = broker_ids)
     response = {}
 
     if status == 1:
