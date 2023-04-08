@@ -4,7 +4,7 @@ import uuid
 import requests
 from typing import List
 from concurrent.futures import ThreadPoolExecutor
-from random import randint
+from random import randint, shuffle
 
 class WriteManager:
     def __init__(self) -> None:
@@ -22,23 +22,25 @@ class WriteManager:
     # def updateConsumerPartition(consumer_id,new_part_metadata):
     #     ConsumerMetadata.updateConsumerPartition(consumer_id=consumer_id,new_partition_metadata=new_part_metadata)
 
+    # TODO : Remove create partition on demand/ Unhealthy to healthy
     @staticmethod
     def receive_heartbeat(broker_id, ip, port):
         # check if that broker was inactive
-        if not BrokerMetadata.checkBroker(broker_id):
-            # update the partition metadata for that broker
-            topics = PartitionMetadata.listTopics()
-            for topic in topics:
-                # check if partition exists for that broker 
-                if not PartitionMetadata.checkPartition(topic, broker_id):
-                    # create a new partition
-                    PartitionMetadata.createPartition(topic, broker_id)
+        # if not BrokerMetadata.checkBroker(broker_id):
+        #     # update the partition metadata for that broker
+        #     topics = PartitionMetadata.listTopics()
+        #     for topic in topics:
+        #         # check if partition exists for that broker 
+        #         if not PartitionMetadata.checkPartition(topic, broker_id):
+        #             # create a new partition
+        #             PartitionMetadata.createPartition(topic, broker_id)
         endpoint = "http://{}:{}".format(ip,port)
         BrokerMetadata.updateIP(broker_id,endpoint)
         BrokerMetadata.updateTimeStamp(broker_id)
 
+    ## TODO : choose 1/3 of healthy brokers
     @staticmethod
-    def create_topic(topic_name: str) -> List[int]:
+    def create_topic(topic_name: str, rep_fac=3) -> List[int]:
         """
         Create a topic with the given name.
         We create partitions in all active brokers on demand 
@@ -51,11 +53,25 @@ class WriteManager:
         if topic_name in PartitionMetadata.listTopics():
             return -1
         broker_ids = BrokerMetadata.get_active_brokers()
+        shuffle(broker_ids)
         partition_ids = []
-        for broker_id in broker_ids:
-            partition_id = PartitionMetadata.createPartition(topic_name, broker_id)
+        j = len(broker_ids)//rep_fac
+        if(j==0):
+                return -1
+        
+        for i in range(j):
+            broker_id = broker_ids[i]
+            replication_id = 0
+            partition_id = PartitionMetadata.createPartition(topic_name, broker_id, replication_id)
             if (partition_id != -1):
                 partition_ids.append(partition_id)
+        
+
+        # 0 1 2 3 4 5
+        for i in range(1, rep_fac):
+            for k in range(j):
+                PartitionMetadata.createPartition(topic_name, broker_ids[i*j+k], i, partition_id=partition_ids[k])
+
         return partition_ids
 
     @staticmethod
@@ -74,8 +90,11 @@ class WriteManager:
         idx = randint(0, n)
         for i in range(0, n):
             partition_id = partition_ids[(i+idx) %n]
-            if(BrokerMetadata.checkBroker(PartitionMetadata.getBrokerID(topic_name, partition_id))):
-                return partition_id
+            broker_ids = PartitionMetadata.getBrokerIDs(topic_name, partition_id)
+            
+            for broker_id in broker_ids:
+                if(BrokerMetadata.checkBroker(broker_id)):
+                    return partition_id
         # No ok partitions available
         return -1
     
@@ -115,6 +134,7 @@ class WriteManager:
 
     # register_broker(broker_id) -> broker_id
     #   {broker gives its broker_id if it restarts after failure, else supply broker_id}
+    # TODO: Remove create partition
     @staticmethod
     def register_broker(endpoint):
         # todo: when adding a broker get it in sync with current topics and create partitions for it.
@@ -124,9 +144,9 @@ class WriteManager:
         
         try:
             broker_id = BrokerMetadata.createBroker(endpoint)
-            topics = PartitionMetadata.listTopics()
-            for topic in topics:
-                PartitionMetadata.createPartition(topic,broker_id)
+            # topics = PartitionMetadata.listTopics()
+            # for topic in topics:
+            #     PartitionMetadata.createPartition(topic,broker_id)
             print(f"Created Broker: {broker_id}")
             # import ipdb; ipdb.set_trace()
             return broker_id
@@ -147,11 +167,12 @@ class WriteManager:
     
 
     @staticmethod
-    def send_request(broker_endpoint, topic_name, partition_id, message):
+    def send_request(broker_endpoint, topic_name, partition_id, message, broker_ids):
         data = {
             "topic_name": topic_name,
             "partition_id": partition_id,
-            "message": message
+            "message": message,
+            "broker_ids": broker_ids 
         }
         response = requests.post(broker_endpoint, json=data)
         return response.json()
@@ -166,13 +187,23 @@ class WriteManager:
         if partition_id is None:
             partition_id = WriteManager.round_robin_partition(topic_name, producer_id)
         
+        broker_ids = None
+        broker_id = None
         try:
-            broker_id = PartitionMetadata.getBrokerID(topic_name, partition_id)
+            # ids -> request -> send request to one of the ids
+            # use getBrokerIDs
+            broker_ids = PartitionMetadata.getBrokerIDs(topic_name, partition_id)
+            for b_id in broker_ids:
+                if(BrokerMetadata.checkBroker(b_id)):
+                    broker_id = b_id
+            broker_ids = [str(b_id) for b_id in broker_ids]
+            broker_ids = ','.join(broker_ids)
+            # broker_id = PartitionMetadata.getBrokerID(topic_name, partition_id)
         except:
             return {"status": "Failure", "message": "Partition not found"}
         broker_endpoint = BrokerMetadata.getBrokerEndpoint(broker_id)
         broker_endpoint = broker_endpoint + "/producer/produce"
-        response = WriteManager.send_request( broker_endpoint, topic_name, partition_id, message)
+        response = WriteManager.send_request( broker_endpoint, topic_name, partition_id, message, broker_ids)
         if response['status']=='Success':
             PartitionMetadata.increaseSize(topic_name=topic_name,partition_id=partition_id)
         return response

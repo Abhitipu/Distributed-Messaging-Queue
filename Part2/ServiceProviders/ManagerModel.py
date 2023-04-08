@@ -94,6 +94,7 @@ class PartitionMetadata(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
     topic_name = db.Column(db.String())
     partition_id = db.Column(db.Integer())
+    replica_id = db.Column(db.Integer())
     broker_id = db.Column(db.Integer(), db.ForeignKey('BrokerMetadata.broker_id'))
     size = db.Column(db.Integer(), default=0)
 
@@ -102,20 +103,26 @@ class PartitionMetadata(db.Model):
         db.UniqueConstraint('partition_id', 'topic_name'),
       )
 
-    def __init__(self, topic_name, broker_id):
+    def __init__(self, topic_name, broker_id, replica_id, partition_id):
         self.topic_name = topic_name
         self.broker_id = broker_id
-        # find max partition_id for this topic and add 1
-        max_part_id = db.session.query(db.func.max(
-            PartitionMetadata.partition_id)).filter_by(topic_name=topic_name).scalar()
-        if max_part_id is None:
-            self.partition_id = 0
+        self.replica_id = replica_id
+        if partition_id == None:
+            # find max partition_id for this topic and add 1
+            max_part_id = db.session.query(db.func.max(
+                PartitionMetadata.partition_id)).filter_by(topic_name=topic_name).scalar()
+            if max_part_id is None:
+                self.partition_id = 0
+            else:
+                self.partition_id = max_part_id + 1
         else:
-            self.partition_id = max_part_id + 1
-
+            self.partition_id = partition_id
     @staticmethod
-    def createPartition(topic_name, broker_id):
-        entry = PartitionMetadata(topic_name, broker_id)
+    def createPartition(topic_name, broker_id, replica_id, partition_id=None):
+        # if none -> original
+        # else copy partition id
+        
+        entry = PartitionMetadata(topic_name, broker_id, replica_id, partition_id)
         try:
             db.session.add(entry)
             db.session.commit()
@@ -124,6 +131,7 @@ class PartitionMetadata(db.Model):
             return -1
         partition_id = entry.partition_id
         return partition_id
+
 
     # @staticmethod
     # def exist(topic_name, partition_offset):
@@ -143,16 +151,21 @@ class PartitionMetadata(db.Model):
         query = [entry.partition_id for entry in PartitionMetadata.query.filter_by(topic_name=topic_name).all() if BrokerMetadata.checkBroker(entry.broker_id)]
         return sorted(list(set(query)))
 
+    # changed to include replica_id
     @staticmethod
-    def getPartition_Metadata(topic_name, partition_id):
+    def getPartition_Metadata(topic_name, partition_id, replica_id):
         import sys
-        print(f" AAAAAAAAAAAAAAAAAAAAA {topic_name} {partition_id}", file=sys.stderr)
-        return PartitionMetadata.query.filter_by(topic_name=topic_name, partition_id=partition_id).first().id
+        print(f" AAAAAAAAAAAAAAAAAAAAA {topic_name} {partition_id} {replica_id}", file=sys.stderr)
+        return PartitionMetadata.query.filter_by(topic_name=topic_name, partition_id=partition_id, replica_id=replica_id).first().id
+    
+
     
     @staticmethod
     def increaseSize(topic_name, partition_id):
-        partition = PartitionMetadata.query.filter_by(topic_name=topic_name, partition_id=partition_id).first()
-        partition.size += 1
+        replicas = PartitionMetadata.query.filter_by(topic_name=topic_name, partition_id=partition_id)
+        for replica in replicas:
+            replica.size += 1
+        
         db.session.commit()
 
     @staticmethod
@@ -160,8 +173,13 @@ class PartitionMetadata(db.Model):
         return PartitionMetadata.query.filter_by(topic_name=topic_name, partition_id=partition_id).first().size
     
     @staticmethod
-    def getBrokerID(topic_name, partition_id):
-        return PartitionMetadata.query.filter_by(topic_name=topic_name, partition_id=partition_id).first().broker_id
+    def getBrokerID(topic_name, partition_id, replica_id):
+        return PartitionMetadata.query.filter_by(topic_name=topic_name, partition_id=partition_id, replica_id=replica_id).first().broker_id
+    
+    @staticmethod
+    def getBrokerIDs(topic_name, partition_id):
+        query = [entry.broker_id for entry in PartitionMetadata.query.filter_by(topic_name=topic_name, partition_id=partition_id).all()]
+        return query
 
     @staticmethod
     def checkPartition(topic_name, partition_id):
