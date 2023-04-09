@@ -1,7 +1,13 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
-from pysyncobj import SyncObj, replicated
+from PySyncObj.pysyncobj import SyncObj, replicated, SyncObjConsumer
+
+# Modifications
+# Id an obj with something more than a hostname and port
+# Reimplement the send and recv callbacks
+# TCP connection rerouting
+
 import os 
 import sys
 from create_app import get_app
@@ -201,3 +207,35 @@ class ReplicatedTopicMessage(SyncObj):
         return TopicMessage.getSizeforTopic(topic_name, partition_id, offset)
 
 
+class BrokerLevel(SyncObj):
+    def __init__(self):
+        # selfNode
+        # no otherNodes
+        
+        pass
+    
+    @replicated
+    def _addMessage(self, some_stuff):
+        # find correct partition obj and call addMessage on it
+        pass
+    
+    def addMessage(self, some_stuff):
+        # Manager calls this -- we know topic name, partition id
+        # got the correct objects -- Partition
+        
+        # call _addMessage on Partition
+        pass
+
+class Partition(SyncObj):
+    def __init__(self):
+        # otherNodes = otherBroker with same partition
+        pass
+
+    @replicated
+    def _addMessage():
+        # does this call BrokerLevel._addMessage on otherNode
+        pass
+    
+    def addMessage(self, some_stuff):
+        # touch database
+        pass

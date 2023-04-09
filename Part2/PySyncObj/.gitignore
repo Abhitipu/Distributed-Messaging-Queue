@@ -1,0 +1,11 @@
+*.pyc
+.idea/
+MANIFEST
+dist/
+*.bak
+*.bin
+build/
+docs/build*
+.DS_Store
+.cache/
+pysyncobj.egg-info/
