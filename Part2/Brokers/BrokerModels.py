@@ -68,14 +68,13 @@ class TopicName(db.Model):
                 topic_name=topic_name, partition_id=partition_id).first()
         return True if topic else False
 
-
 class ReplicatedTopicName(SyncObj):
 
     def __init__(self):
         self_addr = os.getenv('HOSTNAME')+':'+os.getenv('PORT1')
         base_broker = '_'.join(os.getenv('HOSTNAME').split('_')[:-1])
         addr_list = []
-        for suffix in ['one', 'two', 'three']:
+        for suffix in ['one', 'two', 'three', 'four', 'five', 'six']:
             if suffix != os.getenv('HOSTNAME').split('_')[-1]:
                 addr_list.append(base_broker + '_' + suffix +
                                  ':' + os.getenv('PORT1'))
@@ -152,6 +151,20 @@ class TopicMessage(db.Model):
             return TopicMessage.query.filter_by(topic_name=topic_name, partition_id=partition_id).count() - offset
 
 
+class ReplicatedMessagePartitionLevel(object):
+    def __init__(self, topic_name, partition_id):
+        self.topic_name = topic_name
+        self.partition_id = partition_id
+
+    def partitionAddMessage(self,message):
+        return TopicMessage.addMessage(message, self.topic_name, self.partition_id)
+    
+    def partitionRetrieveMessage(self,offset):
+        return TopicMessage.retrieveMessage(self.topic_name, self.partition_id, offset)
+
+    def partitionGetSizeForTopic(self,offset):
+        return TopicMessage.getSizeforTopic(self.topic_name, self.partition_id, offset)
+
 
 class ReplicatedTopicMessage(SyncObj):
 
@@ -159,7 +172,7 @@ class ReplicatedTopicMessage(SyncObj):
         self_addr = os.getenv('HOSTNAME')+':'+os.getenv('PORT2')
         base_broker = '_'.join(os.getenv('HOSTNAME').split('_')[:-1])
         addr_list = []
-        for suffix in ['one', 'two', 'three']:
+        for suffix in ['one', 'two', 'three', 'four', 'five', 'six']:
             if suffix != os.getenv('HOSTNAME').split('_')[-1]:
                 addr_list.append(base_broker + '_' + suffix +
                                  ':' + os.getenv('PORT2'))
@@ -167,7 +180,7 @@ class ReplicatedTopicMessage(SyncObj):
         print(f"self_addr: {self_addr}")
         print(f"addr_list: {addr_list}")
         super(ReplicatedTopicMessage, self).__init__(self_addr, addr_list)
-
+        self.replicatedPartitionObjectDict = {}
 
     @replicated
     def addMessage(self, message, topic_name, partition_id, broker_ids):
@@ -175,10 +188,14 @@ class ReplicatedTopicMessage(SyncObj):
         if broker_id not in broker_ids:
             return 2
         print("Hiiiii add message replicated topic ",file=sys.stderr)
-        return TopicMessage.addMessage(message, topic_name, partition_id)
+        if not ((topic_name, partition_id) in self.replicatedPartitionObjectDict):
+            self.replicatedPartitionObjectDict[(topic_name,partition_id)]=ReplicatedMessagePartitionLevel(topic_name,partition_id)
+        return self.replicatedPartitionObjectDict[(topic_name,partition_id)].partitionAddMessage(message)
 
     def retrieveMessage(self, topic_name, partition_id, offset):
         return TopicMessage.retrieveMessage(topic_name, partition_id, offset)
 
     def getSizeforTopic(self, topic_name, partition_id, offset):
         return TopicMessage.getSizeforTopic(topic_name, partition_id, offset)
+
+
