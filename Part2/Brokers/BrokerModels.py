@@ -85,10 +85,11 @@ class ReplicatedTopicName(SyncObj):
 
     @replicated
     def CreateTopic(self, topic_name, partition_id, broker_ids):
-        broker_id = ID.getID()
-        if broker_id not in broker_ids:
-            return 2
-        return TopicName.CreateTopic(topic_name, partition_id)
+        with get_app().app_context():
+            broker_id = ID.getID()
+            if broker_id not in broker_ids:
+                return 2
+            return TopicName.CreateTopic(topic_name, partition_id)
 
     def CheckTopic(self, topic_name, partition_id):
         return TopicName.CheckTopic(topic_name, partition_id)
@@ -184,13 +185,14 @@ class ReplicatedTopicMessage(SyncObj):
 
     @replicated
     def addMessage(self, message, topic_name, partition_id, broker_ids):
-        broker_id = ID.getID()
-        if broker_id not in broker_ids:
-            return 2
-        print("Hiiiii add message replicated topic ",file=sys.stderr)
-        if not ((topic_name, partition_id) in self.replicatedPartitionObjectDict):
-            self.replicatedPartitionObjectDict[(topic_name,partition_id)]=ReplicatedMessagePartitionLevel(topic_name,partition_id)
-        return self.replicatedPartitionObjectDict[(topic_name,partition_id)].partitionAddMessage(message)
+        with get_app().app_context():
+            broker_id = ID.getID()
+            if broker_id not in broker_ids:
+                return 2
+            print("Hiiiii add message replicated topic ",file=sys.stderr)
+            if not ((topic_name, partition_id) in self.replicatedPartitionObjectDict):
+                self.replicatedPartitionObjectDict[(topic_name,partition_id)]=ReplicatedMessagePartitionLevel(topic_name,partition_id)
+            return self.replicatedPartitionObjectDict[(topic_name,partition_id)].partitionAddMessage(message)
 
     def retrieveMessage(self, topic_name, partition_id, offset):
         return TopicMessage.retrieveMessage(topic_name, partition_id, offset)

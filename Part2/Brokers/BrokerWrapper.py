@@ -20,7 +20,7 @@ app = get_app()
 logging.warning("text")
 DATABASE_CONFIG = {
     'driver': 'postgresql',
-    'host': os.getenv('DB_NAME') + '_' + os.getenv('HOSTNAME').split('_')[-1],
+    'host': os.getenv('DB_NAME'),
     'user': 'postgres',
     'password': 'postgres',
     'port': 5432,
