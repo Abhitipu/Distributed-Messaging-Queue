@@ -68,9 +68,10 @@ class WriteManager:
         
 
         # 0 1 2 3 4 5
-        for i in range(1, rep_fac):
-            for k in range(j):
-                PartitionMetadata.createPartition(topic_name, broker_ids[i*j+k], i, partition_id=partition_ids[k])
+        for i in range(1,rep_fac):
+            for k in range(len(partition_ids)):
+                import sys
+                print(PartitionMetadata.createPartition(topic_name, broker_ids[i*j+k], i, partition_id=partition_ids[k]),file=sys.stderr)
 
         return partition_ids
 

@@ -100,7 +100,7 @@ class PartitionMetadata(db.Model):
 
     __table_args__ = (
         # this can be db.PrimaryKeyConstraint if you want it to be a primary key
-        db.UniqueConstraint('partition_id', 'topic_name'),
+        db.UniqueConstraint('partition_id', 'replica_id', 'topic_name'),
       )
 
     def __init__(self, topic_name, broker_id, replica_id, partition_id):
