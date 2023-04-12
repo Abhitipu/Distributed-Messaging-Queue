@@ -591,3 +591,30 @@ class TCPTransport(Transport):
         for conn in list(self._unknownConnections):
             conn.disconnect()
         self._unknownConnections = set()
+
+
+class BrokerLevelTransport(TCPTransport):
+    def __init__(self, partition_ids, syncObj, selfNode, otherNodes):
+        self.partition_ids = set(partition_ids)
+        super(BrokerLevelTransport, self).__init__(syncObj, selfNode, otherNodes)
+
+    def addPartition(self, topic_name, partition_id):
+        if (topic_name, partition_id) in self.partition_ids:
+            return        
+        self.partition_ids.add((topic_name, partition_id))
+    
+    def removePartition(self, topic_name, partition_id):
+        if (topic_name, partition_id) not in self.partition_ids:
+            return
+        self.partition_ids.remove((topic_name, partition_id))
+    
+    def interceptSend(self, message):
+        # get the partition_id, topic_name and send
+        pass
+    
+    def interceptReceive(self, message):
+        # extract the partition_ids and topic name to check if it is in the set
+        topic_name = message['topic_name']
+        partition_id = message['partition_id']
+        # send to the particular partition
+        pass

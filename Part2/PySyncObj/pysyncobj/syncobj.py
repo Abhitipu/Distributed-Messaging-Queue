@@ -91,7 +91,7 @@ class SyncObjConsumer(object):
 # https://github.com/bakwc/PySyncObj
 
 class SyncObj(object):
-    def __init__(self, selfNode, otherNodes, conf=None, consumers=None, nodeClass = TCPNode, transport = None, transportClass = TCPTransport):
+    def __init__(self, selfNode, otherNodes, topic_name, partition_id, conf=None, consumers=None, nodeClass = TCPNode, transport = None, transportClass = TCPTransport):
         # nodeClass: PartitionNode
         # transportClass: Broker
         

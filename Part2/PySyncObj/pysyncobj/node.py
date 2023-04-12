@@ -92,3 +92,13 @@ class TCPNode(Node):
         filtered = ['_id', '_TCPNode__address', '_TCPNode__host', '_TCPNode__port', '_TCPNode__ip']
         formatted = ['{} = {}'.format(key, repr(v[key])) for key in v if key not in filtered]
         return '{}({}{})'.format(type(self).__name__, repr(self.id), (', ' + ', '.join(formatted)) if len(formatted) else '')
+
+class PartitionTCPNode(TCPNode):
+    def __init__(self, address, **kwargs):
+        super(PartitionTCPNode, self).__init__(address, **kwargs)
+        self.__partition_id = kwargs['partition']
+        self.__topic_name = kwargs['topic_name']
+    
+    @property
+    def id(self):
+        return str(self.__partition_id) + self.__topic_name
