@@ -2,6 +2,16 @@ import random
 import requests
 from time import sleep
 
+# Basically we test replication abilities here
+# We need to produce to and consume from a single patition only
+# We create replicas of the particular partition and
+# make the corresponding brokers down to test both produce and consume
+
+# Only when all of them are down, they should fail
+# Else, it should work
+
+# NOTE: Also check if the raft consensus is 
+# maintained even after broker is down.
 def test(HOST, PORT):
     base_url = f"http://{HOST}:{PORT}"
     print(f"Hitting the base url: {base_url}")
@@ -37,6 +47,7 @@ def test(HOST, PORT):
     # Register consumer
     print("Testing the endpoint register consumer (topic level)")
     url = base_url + "/consumer/register"
+    # TODO: we need to fix the partition to read from here 
     data = {
         "topic_name": "topic_1"
     }
@@ -62,6 +73,8 @@ def test(HOST, PORT):
     num_of_messages = 10
     print(f"Pushing {num_of_messages} messages on Topic topic_1")
     
+    # TODO: Always produce to a fixed partition 
+    # IDEA: Maybe use 0 as id
     url = base_url + "/producer/produce"
     try:
         for i in range(num_of_messages):
@@ -88,8 +101,8 @@ def test(HOST, PORT):
     _ = input("Press enter to continue...")
     
     # Make broker 1 down
-    # Consume some messages from broker 2 and 3
-    # Also produce some messages to broker 2 and 3
+    # Consume some messages from broker 2 and 3 (Basically the ones having a replica)
+    # Also produce some messages to broker 2 and 3 (Should work again)
     print(f"Consuming messages using the consumer {consumer_id} and reporting size too")
 
     try:
@@ -158,8 +171,8 @@ def test(HOST, PORT):
     _ = input("Press enter to continue...")
     
     # Make broker 2 down
-    # Consume some more messages from broker 3
-    # Also produce some messages to broker 3
+    # Consume some more messages from broker 3 (Should keep working)
+    # Also produce some messages to broker 3 (Should keep working)
     print(f"Consuming messages using the consumer {consumer_id} and reporting size too")
 
     try:
@@ -227,7 +240,7 @@ def test(HOST, PORT):
     print("INSTRUCTION: Make broker 3 down")
     _ = input("Press enter to continue...")
     # Make broker 3 down
-    # Should not be able to consume messages
+    # Should not be able to consume messages (since all replicas are down)
     # Produce should also fail
     print(f"Consuming messages using the consumer {consumer_id} and reporting size too")
     try:
