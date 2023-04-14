@@ -89,7 +89,7 @@ def create():
 @app.route('/withdraw', methods=['POST'])
 def withdraw():
     dict = request.get_json()
-    status = replicated_account().withdraw(dict['account_id'], dict['amount'],sync=True)
+    status = replicated_account().withdraw(dict['account_id'], dict['amount'],sync=False)
     
     if status == -1:
         response = {
@@ -112,7 +112,7 @@ def withdraw():
 @app.route('/deposit', methods=['POST'])
 def deposit():
     dict = request.get_json()
-    status = replicated_account().deposit(dict['account_id'], dict['amount'],sync=True)
+    status = replicated_account().deposit(dict['account_id'], dict['amount'],sync=False)
     
     if status == -1:
         response = {
@@ -150,7 +150,7 @@ def get_balance():
 @app.route('/transfer', methods=['POST'])
 def transfer():
     dict = request.get_json()
-    status = replicated_account().transfer(dict['from_account_id'], dict['to_account_id'], dict['amount'],sync=True)
+    status = replicated_account().transfer(dict['from_account_id'], dict['to_account_id'], dict['amount'],sync=False)
     if status == -1:
         response = {
             "status": "Failure",

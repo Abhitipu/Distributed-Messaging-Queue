@@ -15,7 +15,7 @@ class ReplicatedAccount(SyncObj):
         self_addr = os.getenv('HOSTNAME')+':'+os.getenv('PORT')
         base_broker = '_'.join(os.getenv('HOSTNAME').split('_')[:-1])
         addr_list = []
-        for suffix in ['one', 'two', 'three']:
+        for suffix in ['one', 'two', 'three', 'four']:
             if suffix != os.getenv('HOSTNAME').split('_')[-1]:
                 addr_list.append(base_broker + '_' + suffix +
                                  ':' + os.getenv('PORT'))
@@ -29,7 +29,7 @@ class ReplicatedAccount(SyncObj):
 
     def create(self):
         account_id = uuid.uuid4()
-        return self._create(account_id,sync=True)
+        return self._create(account_id,sync=False)
 
     @replicated
     def deposit(self, account_id, amount):

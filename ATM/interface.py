@@ -74,7 +74,7 @@ def main():
     parser.add_argument("-p", "--port", help="port number",
                          type=int, default=8081)
     parser.add_argument("-ip", "--ip", help="ip address",
-                         type=str, default="0.0.0.0")
+                         type=str, default="127.0.0.1")
     args = parser.parse_args()
     client = ATMClient(args.ip, args.port)    
     # create an event loop to handle user input

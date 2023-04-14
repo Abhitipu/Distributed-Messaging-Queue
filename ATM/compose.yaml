@@ -6,9 +6,9 @@ services:
       container_name: db_one
       hostname: db_one
       environment:
-        - 'POSTGRES_PASSWORD=postgres'
-        - 'POSTGRES_DB=db_one'
-        - 'POSTGRES_USER=postgres'
+        POSTGRES_USER: postgres # The PostgreSQL user (useful to connect to the database)
+        POSTGRES_PASSWORD: postgres # The PostgreSQL password (useful to connect to the database)
+        POSTGRES_DB: db_one # The PostgreSQL default database (automatically created at first launch)
       volumes:
         - "../data/db_one:/var/lib/postgresql/data"
       networks:
@@ -26,8 +26,9 @@ services:
       container_name: db_two
       hostname: db_two
       environment:
-        - 'POSTGRES_PASSWORD=postgres'
-        - 'POSTGRES_DB=db_two'
+        POSTGRES_USER: postgres # The PostgreSQL user (useful to connect to the database)
+        POSTGRES_PASSWORD: postgres # The PostgreSQL password (useful to connect to the database)
+        POSTGRES_DB: db_two # The PostgreSQL default database (automatically created at first launch)
       volumes:
         - "../data/db_two:/var/lib/postgresql/data"
       networks:
@@ -44,8 +45,9 @@ services:
       container_name: db_three
       hostname: db_three
       environment:
-        - 'POSTGRES_PASSWORD=postgres'
-        - 'POSTGRES_DB=db_three'
+        POSTGRES_USER: postgres # The PostgreSQL user (useful to connect to the database)
+        POSTGRES_PASSWORD: postgres # The PostgreSQL password (useful to connect to the database)
+        POSTGRES_DB: db_three # The PostgreSQL default database (automatically created at first launch)
       volumes:
         - "../data/db_three:/var/lib/postgresql/data"
       networks:
@@ -57,6 +59,25 @@ services:
         retries: 3
       restart: always   
     
+    db_four:
+      image: postgres:13
+      container_name: db_four
+      hostname: db_four
+      environment:
+        POSTGRES_USER: postgres # The PostgreSQL user (useful to connect to the database)
+        POSTGRES_PASSWORD: postgres # The PostgreSQL password (useful to connect to the database)
+        POSTGRES_DB: db_four # The PostgreSQL default database (automatically created at first launch)
+      volumes:
+        - "../data/db_four:/var/lib/postgresql/data"
+      networks:
+        - atmnet
+      healthcheck:
+        test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres --dbname db_four'"]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+      restart: always  
+
     atm_one: 
       image: atm:latest
       container_name: atm_one
@@ -106,7 +127,7 @@ services:
         - 8083:8081
       restart: always
       depends_on:
-        db_one : 
+        db_three : 
           condition: service_healthy
       environment:
             - DB_NAME=db_three
@@ -115,6 +136,25 @@ services:
       entrypoint: python
       command: app.py
     
+    atm_four: 
+      image: atm:latest
+      container_name: atm_four
+      hostname: atm_four
+      networks:
+        - atmnet
+      ports:
+        - 8084:8081
+      restart: always
+      depends_on:
+        db_four : 
+          condition: service_healthy
+      environment:
+            - DB_NAME=db_four
+            - HOST_NAME=atm_four
+            - PORT=8080
+      entrypoint: python
+      command: app.py
+
 networks:
     atmnet:
       driver: bridge
