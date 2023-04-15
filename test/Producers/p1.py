@@ -1,4 +1,4 @@
-from ServiceConsumers import MyProducer
+from ...Part2.ServiceConsumers import MyProducer
 import random
 import time
 
