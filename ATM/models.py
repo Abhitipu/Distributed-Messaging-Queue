@@ -2,6 +2,7 @@ import uuid
 import os
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
+import sys
 
 db = SQLAlchemy()
 
@@ -21,7 +22,8 @@ class ReplicatedAccount(SyncObj):
                                  ':' + os.getenv('PORT'))
         print(f"self_addr: {self_addr}")
         print(f"addr_list: {addr_list}")
-        super(ReplicatedAccount, self).__init__(self_addr, addr_list)
+        super(ReplicatedAccount, self).__init__(self_addr, addr_list,conf=SyncObjConf(
+            journalFile=f"/app/scratch/ReplicatedAccount.journal", appendEntriesUseBatch=False))
 
     @replicated
     def _create(self,account_id):
@@ -29,7 +31,7 @@ class ReplicatedAccount(SyncObj):
 
     def create(self):
         account_id = uuid.uuid4()
-        return self._create(account_id,sync=False)
+        return self._create(account_id,sync=True)
 
     @replicated
     def deposit(self, account_id, amount):
@@ -74,12 +76,17 @@ class Account(db.Model):
             return Account.query.filter_by(account_id=account_id).first() is not None
 
     @staticmethod
-    def CreateAccount(account_id):
+    def CreateAccount(account_id):    
         with get_app().app_context():
-            account = Account(account_id, 0)
-            db.session.add(account)
-            db.session.commit()
-            return account_id
+            try:
+                account = Account(account_id, 0)
+                db.session.add(account)
+                db.session.commit()
+                return account_id
+            except Exception as e:
+                print(e, file=sys.stderr)
+                db.session.rollback()
+                return -1
         
     @staticmethod
     def Deposit(account_id, amount):

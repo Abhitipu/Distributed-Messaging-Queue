@@ -90,6 +90,8 @@ services:
       depends_on:
         db_one : 
           condition: service_healthy
+      volumes:
+        - ../data/atm_one:/app/scratch
       environment:
             - DB_NAME=db_one
             - HOST_NAME=atm_one
@@ -109,6 +111,8 @@ services:
       depends_on:
         db_two : 
           condition: service_healthy
+      volumes:
+        - ../data/atm_two:/app/scratch
       environment:
         - DB_NAME=db_two
         - HOST_NAME=atm_two
@@ -129,6 +133,8 @@ services:
       depends_on:
         db_three : 
           condition: service_healthy
+      volumes:
+        - ../data/atm_three:/app/scratch
       environment:
             - DB_NAME=db_three
             - HOST_NAME=atm_three
@@ -148,6 +154,8 @@ services:
       depends_on:
         db_four : 
           condition: service_healthy
+      volumes:
+        - ../data/atm_four:/app/scratch
       environment:
             - DB_NAME=db_four
             - HOST_NAME=atm_four
