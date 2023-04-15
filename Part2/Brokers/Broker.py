@@ -16,15 +16,20 @@ class LoggingQueue():
     def wait_till_ready(self):
         print("hi before bind 1 ",file=sys.stderr)
         self.ReplicatedTopicName_obj.waitBinded()
-        print("hi before read 1 ",file=sys.stderr)
-        self.ReplicatedTopicName_obj.waitReady()
+        print("hi before ready 1 ",file=sys.stderr)
+        while not self.ReplicatedTopicName_obj.isReady():
+            sleep(0.5)
+        # self.ReplicatedTopicName_obj.waitReady()
         print("hi before bind 2 ",file=sys.stderr)
-        
         self.ReplicatedTopicMessage_obj.waitBinded()
-        print("hi before read 2 ",file=sys.stderr)
-        
+        print("hi before ready 2 ",file=sys.stderr)
         self.ReplicatedTopicMessage_obj.waitReady()
-        print("hi after read 2 ",file=sys.stderr)
+        # while True:
+        #     print(self.ReplicatedTopicMessage_obj.getStatus())
+        #     if self.ReplicatedTopicMessage_obj.isReady():
+        #         break
+            
+        print("hi after ready 2 ",file=sys.stderr)
         
     def heartbeat(self, ip: str, port: int, broker_id, self_port) -> None:
         data = {"broker_id": broker_id, "port": self_port}
