@@ -155,7 +155,8 @@ def test(HOST, PORT):
             data = {
                 "topic_name": "topic_1",
                 "producer_id": producer_id,
-                "message": f"LOG MESSAGE {counter + 1}"
+                "message": f"LOG MESSAGE {counter + 1}",
+                "partition_id": partition_id,
             }
             counter += 1
             print(f"request = {data}")
@@ -215,7 +216,7 @@ def test(HOST, PORT):
     except requests.exceptions.ConnectionError as errc:
         print("Error Connecting:", errc)
     
-    print("Testing production to general partition (randomized)")
+    print("Testing production to specific partition")
     
     print(f"Pushing {num_of_messages} messages on Topic topic_1")
     
@@ -225,7 +226,8 @@ def test(HOST, PORT):
             data = {
                 "topic_name": "topic_1",
                 "producer_id": producer_id,
-                "message": f"LOG MESSAGE {counter + 1}"
+                "message": f"LOG MESSAGE {counter + 1}",
+                "partition_id": partition_id,
             }
             counter += 1
             print(f"request = {data}")
@@ -289,6 +291,7 @@ def test(HOST, PORT):
             "topic_name": "topic_1",
             "producer_id": producer_id,
             "message": f"LOG MESSAGE {counter + 1}"
+            "partition_id": partition_id,
         }
         print(f"request = {data}")
         r = requests.post(url, json=data)
@@ -337,6 +340,8 @@ def test(HOST, PORT):
             r = requests.get(url, json=data)
             r.raise_for_status()
             response = r.json()
+            if response['status'] == 'Failure':
+                break
             print("Response")
             print(response)
             

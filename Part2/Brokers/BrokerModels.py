@@ -84,7 +84,7 @@ class ReplicatedTopicName(SyncObj):
         print(f"self_addr: {self_addr}")
         print(f"addr_list: {addr_list}")
         super(ReplicatedTopicName, self).__init__(self_addr, addr_list,conf=SyncObjConf(
-            journalFile=f"/app/scratch/ReplicatedTopicName.journal", appendEntriesUseBatch=False))
+            journalFile=f"/app/scratch/ReplicatedTopicName.journal", appendEntriesUseBatch=False, dynamicMembershipChange=True))
 
     @replicated
     def CreateTopic(self, topic_name, partition_id, broker_ids):
@@ -185,7 +185,7 @@ class ReplicatedTopicMessage(SyncObj):
         print(f"self_addr: {self_addr}")
         print(f"addr_list: {addr_list}")
         super(ReplicatedTopicMessage, self).__init__(self_addr, addr_list, conf=SyncObjConf(
-            journalFile=f"/app/scratch/ReplicatedTopicMessage.journal", appendEntriesUseBatch=False))
+            journalFile=f"/app/scratch/ReplicatedTopicMessage.journal", appendEntriesUseBatch=False, dynamicMembershipChange=True))
         self.replicatedPartitionObjectDict = {}
 
     @replicated
