@@ -290,7 +290,7 @@ def test(HOST, PORT):
         data = {
             "topic_name": "topic_1",
             "producer_id": producer_id,
-            "message": f"LOG MESSAGE {counter + 1}"
+            "message": f"LOG MESSAGE {counter + 1}",
             "partition_id": partition_id,
         }
         print(f"request = {data}")
