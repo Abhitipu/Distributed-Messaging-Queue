@@ -199,6 +199,7 @@ if __name__ == '__main__':
 
     # global broker
     with app.app_context():
+        db.drop_all()
         db.create_all()  # <--- create db object.
         create_sync_obj()
         # broker.set_app(app)
