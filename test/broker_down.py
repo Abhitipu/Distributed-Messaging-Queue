@@ -45,11 +45,13 @@ def test(HOST, PORT):
     print()
     
     # Register consumer
-    print("Testing the endpoint register consumer (topic level)")
+    print("Testing the endpoint register consumer (partition level)")
     url = base_url + "/consumer/register"
+    partition_id = input("Enter the partition_id")
     # TODO: we need to fix the partition to read from here 
     data = {
-        "topic_name": "topic_1"
+        "topic_name": "topic_1",
+        "partition_id": partition_id
     }
 
     consumer_id = None
@@ -81,6 +83,7 @@ def test(HOST, PORT):
             data = {
                 "topic_name": "topic_1",
                 "producer_id": producer_id,
+                "partition_id": partition_id,
                 "message": f"LOG MESSAGE {counter + 1}"
             }
             counter += 1
@@ -97,7 +100,7 @@ def test(HOST, PORT):
         print("Error Connecting:", errc)
     
     print()
-    print("INSTRUCTION: Make broker 1 down")
+    print(f"INSTRUCTION: Make broker 1 [Find parititon {partition_id} replicas first] down")
     _ = input("Press enter to continue...")
     
     # Make broker 1 down
