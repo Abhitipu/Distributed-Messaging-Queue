@@ -1,4 +1,4 @@
-from ServiceConsumers import MyProducer
+from ...Part2.ServiceConsumers import MyProducer
 import random
 import time
 
@@ -7,6 +7,8 @@ PORT = 8080
 base_url = f"http://{HOST}:{PORT}"
 
 p3 = MyProducer(topics=["T-1"], broker=base_url)
+
+start = time.time()
 
 with open("test/test_asgn1/producer_3.txt", "r") as f:
     for line in f:
@@ -17,4 +19,6 @@ with open("test/test_asgn1/producer_3.txt", "r") as f:
             response = p3.send(topic_name=topic, message=message)
             if response is not None and response["status"] == "Success":
                 break
-        time.sleep(random.uniform(0, 1))
+        # time.sleep(random.uniform(0, 1))
+
+end = time.time()
