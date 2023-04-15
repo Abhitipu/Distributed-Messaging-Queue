@@ -83,6 +83,8 @@ services:
             - DB_NAME=db_one
             - PORT1=4321
             - PORT2=4567
+        volumes:
+            - ../data/broker_one:/app/scratch
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
     
@@ -118,6 +120,8 @@ services:
             - DB_NAME=db_two
             - PORT1=4321
             - PORT2=4567
+        volumes:
+            - ../data/broker_two:/app/scratch
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
     
@@ -153,6 +157,8 @@ services:
             - DB_NAME=db_three
             - PORT1=4321
             - PORT2=4567
+        volumes:
+            - ../data/broker_three:/app/scratch
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
     
@@ -188,6 +194,8 @@ services:
             - DB_NAME=db_four
             - PORT1=4321
             - PORT2=4567
+        volumes:
+            - ../data/broker_four:/app/scratch
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
     
@@ -223,6 +231,8 @@ services:
             - DB_NAME=db_five
             - PORT1=4321
             - PORT2=4567
+        volumes:
+            - ../data/broker_five:/app/scratch
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
     
@@ -259,6 +269,8 @@ services:
             - DB_NAME=db_six
             - PORT1=4321
             - PORT2=4567
+        volumes:
+            - ../data/broker_six:/app/scratch
         entrypoint: python
         command: -u ./Brokers/BrokerWrapper.py
     

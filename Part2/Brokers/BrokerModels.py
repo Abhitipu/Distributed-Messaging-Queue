@@ -1,12 +1,13 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
-from pysyncobj import SyncObj, replicated
-import os 
+from pysyncobj import SyncObj, replicated, SyncObjConf
+import os
 import sys
 from create_app import get_app
 
 db = SQLAlchemy()
+
 
 class ID(db.Model):
     broker_id = db.Column(db.Integer, primary_key=True)
@@ -22,7 +23,7 @@ class ID(db.Model):
             db.session.add(id)
             db.session.commit()
         except Exception as e:
-            print(e,file=sys.stderr)
+            print(e, file=sys.stderr)
             db.session.rollback()
             return -1
 
@@ -57,7 +58,7 @@ class TopicName(db.Model):
                 db.session.add(topic)
                 db.session.commit()
             except Exception as e:
-                print(e,file=sys.stderr)
+                print(e, file=sys.stderr)
                 db.session.rollback()
                 return -1
 
@@ -67,6 +68,7 @@ class TopicName(db.Model):
             topic = TopicName.query.filter_by(
                 topic_name=topic_name, partition_id=partition_id).first()
         return True if topic else False
+
 
 class ReplicatedTopicName(SyncObj):
 
@@ -81,7 +83,8 @@ class ReplicatedTopicName(SyncObj):
 
         print(f"self_addr: {self_addr}")
         print(f"addr_list: {addr_list}")
-        super(ReplicatedTopicName, self).__init__(self_addr, addr_list)
+        super(ReplicatedTopicName, self).__init__(self_addr, addr_list,conf=SyncObjConf(
+            journalFile=f"/app/scratch/ReplicatedTopicName.journal", appendEntriesUseBatch=False))
 
     @replicated
     def CreateTopic(self, topic_name, partition_id, broker_ids):
@@ -110,6 +113,7 @@ class TopicMessage(db.Model):
         self.topic_name = topic_name
         self.partition_id = partition_id
         self.message = message
+
     def __repr__(self):
         return f"{self.id} {self.topic_name} {self.partition_id} {self.message}"
 
@@ -117,7 +121,7 @@ class TopicMessage(db.Model):
     def addMessage(message, topic_name, partition_id):
         if not TopicName.CheckTopic(topic_name=topic_name, partition_id=partition_id):
             print(
-                f"Topic {topic_name} with partition {partition_id} does not exist.",file=sys.stderr)
+                f"Topic {topic_name} with partition {partition_id} does not exist.", file=sys.stderr)
             return -2
 
         topic = TopicMessage(topic_name, partition_id, message)
@@ -127,7 +131,7 @@ class TopicMessage(db.Model):
                 db.session.add(topic)
                 db.session.commit()
             except Exception as e:
-                print(e,file=sys.stderr)
+                print(e, file=sys.stderr)
                 db.session.rollback()
                 return -1
             return 1
@@ -157,13 +161,13 @@ class ReplicatedMessagePartitionLevel(object):
         self.topic_name = topic_name
         self.partition_id = partition_id
 
-    def partitionAddMessage(self,message):
+    def partitionAddMessage(self, message):
         return TopicMessage.addMessage(message, self.topic_name, self.partition_id)
-    
-    def partitionRetrieveMessage(self,offset):
+
+    def partitionRetrieveMessage(self, offset):
         return TopicMessage.retrieveMessage(self.topic_name, self.partition_id, offset)
 
-    def partitionGetSizeForTopic(self,offset):
+    def partitionGetSizeForTopic(self, offset):
         return TopicMessage.getSizeforTopic(self.topic_name, self.partition_id, offset)
 
 
@@ -180,7 +184,8 @@ class ReplicatedTopicMessage(SyncObj):
 
         print(f"self_addr: {self_addr}")
         print(f"addr_list: {addr_list}")
-        super(ReplicatedTopicMessage, self).__init__(self_addr, addr_list)
+        super(ReplicatedTopicMessage, self).__init__(self_addr, addr_list, conf=SyncObjConf(
+            journalFile=f"/app/scratch/ReplicatedTopicMessage.journal", appendEntriesUseBatch=False))
         self.replicatedPartitionObjectDict = {}
 
     @replicated
@@ -189,15 +194,14 @@ class ReplicatedTopicMessage(SyncObj):
             broker_id = ID.getID()
             if broker_id not in broker_ids:
                 return 2
-            print("Hiiiii add message replicated topic ",file=sys.stderr)
+            print("Hiiiii add message replicated topic ", file=sys.stderr)
             if not ((topic_name, partition_id) in self.replicatedPartitionObjectDict):
-                self.replicatedPartitionObjectDict[(topic_name,partition_id)]=ReplicatedMessagePartitionLevel(topic_name,partition_id)
-            return self.replicatedPartitionObjectDict[(topic_name,partition_id)].partitionAddMessage(message)
+                self.replicatedPartitionObjectDict[(
+                    topic_name, partition_id)] = ReplicatedMessagePartitionLevel(topic_name, partition_id)
+            return self.replicatedPartitionObjectDict[(topic_name, partition_id)].partitionAddMessage(message)
 
     def retrieveMessage(self, topic_name, partition_id, offset):
         return TopicMessage.retrieveMessage(topic_name, partition_id, offset)
 
     def getSizeforTopic(self, topic_name, partition_id, offset):
         return TopicMessage.getSizeforTopic(topic_name, partition_id, offset)
-
-
